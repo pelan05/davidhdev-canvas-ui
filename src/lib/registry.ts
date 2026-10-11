@@ -21,6 +21,11 @@ const COMPONENTS: Record<string, ComponentDef> = {
     dependencies: ["three"],
     devDependencies: ["@types/three"],
   },
+  "ascii-sweep": {
+    base: "AsciiSweep",
+    description:
+      "Swaps two panels of live HTML with a band of glowing ascii characters that sweeps across the exact text lines, tearing rows and trailing phosphor as it passes. Any angle, any charset. The HTML stays interactive.",
+  },
   asciify: {
     base: "Asciify",
     description:
@@ -69,7 +74,7 @@ const COMPONENTS: Record<string, ComponentDef> = {
   liquid: {
     base: "Liquid",
     description:
-      "A pointer-driven WebGL fluid simulation over your page. The HTML stays interactive. No dependencies.",
+      "A pointer-driven GPU fluid simulation over your page. The HTML stays interactive. No dependencies.",
   },
   magnify: {
     base: "Magnify",
@@ -145,6 +150,13 @@ const COMPONENTS: Record<string, ComponentDef> = {
     description:
       "Renders the live page onto a floor of shiny beveled hex tiles that lean back in perspective, bob gently, and rise toward the cursor. The HTML stays interactive. No dependencies.",
   },
+  "ink-object": {
+    base: "InkObject",
+    description:
+      "Renders any GLB/glTF model, SVG, or image in a floating studio scene as hand-pressed ink strokes that break into dashes as the tone lightens, with ragged bleed and dry-brush grain. Built on three.js.",
+    dependencies: ["three"],
+    devDependencies: ["@types/three"],
+  },
   "retro-dither": {
     base: "RetroDither",
     description:
@@ -195,6 +207,32 @@ function read(base: string, fileName: string) {
   return fs.readFileSync(path.join(LIB_ROOT, base, fileName), "utf8");
 }
 
+/** Keep shared runtime helpers in the single-file, installed component too. */
+function inlineEngineHelpers(engine: string) {
+  return engine.replace(
+    /import\s*\{[^}]*\}\s*from\s*["']\.\.\/(canvas-viewport|html-in-canvas|rect-cache)["'];\r?\n*/g,
+    (_import, helper: string) =>
+      fs.readFileSync(path.join(LIB_ROOT, `${helper}.ts`), "utf8")
+        .replace(/^export /gm, "") + "\n",
+  );
+}
+
+export type Renderer = "webgl" | "webgpu";
+
+export const RENDERERS: readonly Renderer[] = ["webgl", "webgpu"];
+
+/** Engine file name for a renderer, e.g. "RippleVanilla.ts" or "RippleWebGPU.ts". */
+export function engineFileName(base: string, renderer: Renderer) {
+  return renderer === "webgpu" ? `${base}WebGPU.ts` : `${base}Vanilla.ts`;
+}
+
+/** True when the component ships a WebGPU (vgpu) engine. */
+export function hasWebGPUEngine(component: string): boolean {
+  const def = COMPONENTS[component];
+  if (!def) return false;
+  return fs.existsSync(path.join(LIB_ROOT, def.base, engineFileName(def.base, "webgpu")));
+}
+
 function vanillaImport(base: string) {
   return new RegExp(
     `[ \\t]*import\\s*\\{[^}]*\\}\\s*from\\s*["']\\./${base}Vanilla["'];\\r?\\n*`,
@@ -232,15 +270,26 @@ export interface ComponentSource {
   source: string;
 }
 
-export function getComponentDependencies(component: string): {
+const WEBGPU_DEPENDENCIES = ["vgpu"];
+const WEBGPU_DEV_DEPENDENCIES = ["@webgpu/types"];
+
+export function getComponentDependencies(
+  component: string,
+  renderer: Renderer = "webgl",
+): {
   dependencies: string[];
   devDependencies: string[];
 } {
   const def = COMPONENTS[component];
-  return {
-    dependencies: def?.dependencies ?? [],
-    devDependencies: def?.devDependencies ?? [],
-  };
+  const dependencies = def?.dependencies ?? [];
+  const devDependencies = def?.devDependencies ?? [];
+  if (renderer === "webgpu") {
+    return {
+      dependencies: [...WEBGPU_DEPENDENCIES, ...dependencies],
+      devDependencies: [...WEBGPU_DEV_DEPENDENCIES, ...devDependencies],
+    };
+  }
+  return { dependencies, devDependencies };
 }
 
 export function getDemoSource(component: string): string | null {
@@ -249,11 +298,20 @@ export function getDemoSource(component: string): string | null {
   return fs.readFileSync(file, "utf8");
 }
 
-export function getComponentSources(component: string): ComponentSource[] {
+/**
+ * Standalone sources per framework. The WebGPU renderer swaps the WebGL engine
+ * for the vgpu one; the wrappers are shared because both engines expose the
+ * same API.
+ */
+export function getComponentSources(
+  component: string,
+  renderer: Renderer = "webgl",
+): ComponentSource[] {
   const def = COMPONENTS[component];
   if (!def) throw new Error(`Unknown component: ${component}`);
   const { base } = def;
-  const engine = read(base, `${base}Vanilla.ts`);
+  if (renderer === "webgpu" && !hasWebGPUEngine(component)) return [];
+  const engine = inlineEngineHelpers(read(base, engineFileName(base, renderer)));
   return [
     {
       id: "react",
@@ -308,7 +366,7 @@ export function getComponentSources(component: string): ComponentSource[] {
     {
       id: "vanilla",
       label: "Vanilla",
-      fileName: `${base}Vanilla.ts`,
+      fileName: engineFileName(base, renderer),
       lang: "typescript",
       source: engine,
     },
@@ -333,24 +391,33 @@ export interface RegistryItem {
   files: RegistryFile[];
 }
 
-export const REGISTRY_ITEMS = Object.keys(COMPONENTS).flatMap((component) =>
-  (["react", "vue", "svelte", "solid", "preact", "vanilla"] as const).map(
+export const REGISTRY_ITEMS = Object.keys(COMPONENTS).flatMap((component) => [
+  ...(["react", "vue", "svelte", "solid", "preact", "vanilla"] as const).map(
     (flavor) => `${component}-${flavor}`,
   ),
-);
+  ...(hasWebGPUEngine(component)
+    ? (["react", "vue", "svelte", "solid", "preact", "vanilla"] as const).map(
+        (flavor) => `${component}-${flavor}-webgpu`,
+      )
+    : []),
+]);
 
 export function getRegistryItem(name: string): RegistryItem | null {
-  const match = /^([a-z-]+)-(react|solid|preact|vue|svelte|vanilla)$/.exec(
-    name,
-  );
+  const match =
+    /^([a-z-]+)-(react|solid|preact|vue|svelte|vanilla)(-webgpu)?$/.exec(name);
   if (!match) return null;
-  const [, component, id] = match;
+  const [, component, id, gpuSuffix] = match;
+  const renderer: Renderer = gpuSuffix ? "webgpu" : "webgl";
   const def = COMPONENTS[component];
   if (!def) return null;
-  const source = getComponentSources(component).find(
+  const source = getComponentSources(component, renderer).find(
     (entry) => entry.id === id,
   );
   if (!source) return null;
+  const { dependencies, devDependencies } = getComponentDependencies(
+    component,
+    renderer,
+  );
 
   const target =
     id === "svelte"
@@ -360,15 +427,21 @@ export function getRegistryItem(name: string): RegistryItem | null {
     $schema: "https://ui.shadcn.com/schema/registry-item.json",
     name,
     type: "registry:component",
-    title: `${def.base} (${source.label})`,
-    description: def.description,
+    title:
+      renderer === "webgpu"
+        ? `${def.base} (${source.label}, WebGPU)`
+        : `${def.base} (${source.label})`,
+    description:
+      renderer === "webgpu"
+        ? `${def.description} WebGPU build, rendered with vgpu.`
+        : def.description,
     dependencies:
       id === "solid"
-        ? ["solid-js", ...(def.dependencies ?? [])]
+        ? ["solid-js", ...dependencies]
         : id === "preact"
-          ? ["preact", ...(def.dependencies ?? [])]
-          : (def.dependencies ?? []),
-    devDependencies: def.devDependencies ?? [],
+          ? ["preact", ...dependencies]
+          : dependencies,
+    devDependencies,
     files: [
       {
         path: target,

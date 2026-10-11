@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Blaze } from "@/lib/Blaze/Blaze";
+import { Blaze } from "@/components/docs/live/Blaze";
 
 const CONTROLS = {
   height: scrub("Height", 0.97, { min: 0.1, max: 1, step: 0.01 }),

@@ -1,3 +1,4 @@
+import { getCanvasPixelRatio, createCanvasResizeObserver } from "../canvas-viewport";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
@@ -1175,7 +1176,7 @@ export function createDitheredObject(
   function resize() {
     const width = Math.max(canvas.clientWidth, 1);
     const height = Math.max(canvas.clientHeight, 1);
-    const pr = Math.min(window.devicePixelRatio || 1, 2);
+    const pr = getCanvasPixelRatio(canvas, renderer.getContext());
     renderer.setPixelRatio(pr);
     renderer.setSize(width, height, false);
     const pixelSize = config.dither
@@ -1195,7 +1196,7 @@ export function createDitheredObject(
     camera.updateProjectionMatrix();
   }
 
-  const observer = new ResizeObserver(resize);
+  const observer = createCanvasResizeObserver(resize);
   observer.observe(canvas);
   resize();
   applyOptions();

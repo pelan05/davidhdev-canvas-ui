@@ -1,3 +1,7 @@
+import { getCanvasPixelRatio, createCanvasResizeObserver } from "../canvas-viewport";
+import { prepareHtmlInCanvas, drawHtmlInCanvas } from "../html-in-canvas";
+import { createRectCache } from "../rect-cache";
+
 export interface LiquidOptions {
   /** Resolution of the simulation grid. */
   simResolution?: number;
@@ -39,9 +43,11 @@ export interface LiquidElements {
 }
 
 export interface LiquidInstance {
-  /** Inject a splat at (x, y) in [0,1] space with velocity (dx, dy). */
+  /** Inject a splat at (x, y) in [0,1] space with velocity (dx, dy).
+   * Keeps the newest 64 pending calls while suspended; applies at most 8 per frame.
+   */
   splat: (x: number, y: number, dx: number, dy: number) => void;
-  /** Update simulation options live. Resolution changes are ignored. */
+  /** Update simulation options live, including simulation target resolution. */
   setOptions: (options: LiquidOptions) => void;
   /** Re-read canvas size. Call when the element is resized. */
   resize: () => void;
@@ -302,6 +308,14 @@ interface DoubleTarget {
   swap: () => void;
 }
 
+interface FluidTargets {
+  velocity: DoubleTarget;
+  dye: DoubleTarget;
+  divergence: Target;
+  curl: Target;
+  pressure: DoubleTarget;
+}
+
 export function supportsHtmlInCanvas(): boolean {
   if (typeof document === "undefined") return false;
   const probe = document.createElement("canvas") as PaintableCanvas;
@@ -329,6 +343,12 @@ export function createLiquid(
   });
   if (!gl || gl.isContextLost()) return null;
 
+  const supportsFloatTargets = Boolean(
+    gl.getExtension("EXT_color_buffer_float") ||
+      gl.getExtension("EXT_color_buffer_half_float"),
+  );
+  if (!supportsFloatTargets) return null;
+
   const sourceCtx = source.getContext("2d") as ElementImageContext | null;
   const paintable = source as PaintableCanvas;
   const htmlInCanvas = Boolean(
@@ -337,6 +357,8 @@ export function createLiquid(
     typeof paintable.requestPaint === "function",
   );
 
+  if (htmlInCanvas) prepareHtmlInCanvas(source, content);
+
   let contentDirty = false;
   let wake = () => {};
 
@@ -344,14 +366,13 @@ export function createLiquid(
     paintable.onpaint = () => {
       try {
         sourceCtx!.reset();
-        sourceCtx!.drawElementImage!(content, 0, 0);
+        drawHtmlInCanvas(source, sourceCtx!, content);
         contentDirty = true;
         wake();
       } catch {}
     };
   }
 
-  gl.getExtension("EXT_color_buffer_float");
   const supportsLinear = Boolean(gl.getExtension("OES_texture_float_linear"));
   const filtering = supportsLinear ? gl.LINEAR : gl.NEAREST;
 
@@ -473,46 +494,70 @@ export function createLiquid(
     };
   }
 
-  const velocity = createDoubleTarget(
+  function createFluidTargets(
+    simResolution: number,
+    dyeResolution: number,
+  ): FluidTargets {
+    return {
+      velocity: createDoubleTarget(
+        simResolution,
+        gl!.RG16F,
+        gl!.RG,
+        filtering,
+      ),
+      dye: createDoubleTarget(
+        dyeResolution,
+        gl!.RGBA16F,
+        gl!.RGBA,
+        filtering,
+      ),
+      divergence: createTarget(
+        simResolution,
+        gl!.R16F,
+        gl!.RED,
+        gl!.NEAREST,
+      ),
+      curl: createTarget(
+        simResolution,
+        gl!.R16F,
+        gl!.RED,
+        gl!.NEAREST,
+      ),
+      pressure: createDoubleTarget(
+        simResolution,
+        gl!.R16F,
+        gl!.RED,
+        gl!.NEAREST,
+      ),
+    };
+  }
+
+  let fluidTargets = createFluidTargets(
     config.simResolution,
-    gl.RG16F,
-    gl.RG,
-    filtering,
-  );
-  const dye = createDoubleTarget(
     config.dyeResolution,
-    gl.RGBA16F,
-    gl.RGBA,
-    filtering,
-  );
-  const divergence = createTarget(
-    config.simResolution,
-    gl.R16F,
-    gl.RED,
-    gl.NEAREST,
-  );
-  const curl = createTarget(config.simResolution, gl.R16F, gl.RED, gl.NEAREST);
-  const pressure = createDoubleTarget(
-    config.simResolution,
-    gl.R16F,
-    gl.RED,
-    gl.NEAREST,
   );
 
-  function releaseAll() {
+  function releaseTargets(targets: FluidTargets) {
     [
-      velocity.read,
-      velocity.write,
-      dye.read,
-      dye.write,
-      pressure.read,
-      pressure.write,
-      divergence,
-      curl,
+      targets.velocity.read,
+      targets.velocity.write,
+      targets.dye.read,
+      targets.dye.write,
+      targets.pressure.read,
+      targets.pressure.write,
+      targets.divergence,
+      targets.curl,
     ].forEach((t) => {
       gl!.deleteFramebuffer(t.fbo);
       gl!.deleteTexture(t.texture);
     });
+  }
+
+  function rebuildFluidTargets(simResolution: number, dyeResolution: number) {
+    const next = createFluidTargets(simResolution, dyeResolution);
+    const previous = fluidTargets;
+    fluidTargets = next;
+    releaseTargets(previous);
   }
 
   let texelX = 0;
@@ -526,7 +571,7 @@ export function createLiquid(
   }
 
   function syncCanvasSize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = getCanvasPixelRatio(output, gl!);
     const width = Math.max(1, Math.round(output.clientWidth * dpr));
     const height = Math.max(1, Math.round(output.clientHeight * dpr));
     if (output.width !== width || output.height !== height) {
@@ -534,11 +579,11 @@ export function createLiquid(
       output.height = height;
     }
     if (htmlInCanvas) {
-      const cssWidth = Math.max(1, Math.round(source.clientWidth));
-      const cssHeight = Math.max(1, Math.round(source.clientHeight));
-      if (source.width !== cssWidth * dpr || source.height !== cssHeight * dpr) {
-        source.width = cssWidth * dpr;
-        source.height = cssHeight * dpr;
+      const sourceWidth = Math.max(1, Math.round(source.clientWidth * dpr));
+      const sourceHeight = Math.max(1, Math.round(source.clientHeight * dpr));
+      if (source.width !== sourceWidth || source.height !== sourceHeight) {
+        source.width = sourceWidth;
+        source.height = sourceHeight;
       }
       paintable.requestPaint!();
     }
@@ -603,21 +648,21 @@ export function createLiquid(
     gl!.useProgram(splatProgram.program);
     gl!.uniform1i(
       splatProgram.uniforms.uTarget,
-      bindTexture(velocity.read.texture, 0),
+      bindTexture(fluidTargets.velocity.read.texture, 0),
     );
     gl!.uniform1f(splatProgram.uniforms.uAspect, aspect);
     gl!.uniform2f(splatProgram.uniforms.uPoint, x, y);
     gl!.uniform3f(splatProgram.uniforms.uColor, dx, dy, 10);
     gl!.uniform1f(splatProgram.uniforms.uRadius, radius);
-    blit(velocity.write);
-    velocity.swap();
+    blit(fluidTargets.velocity.write);
+    fluidTargets.velocity.swap();
 
     gl!.uniform1i(
       splatProgram.uniforms.uTarget,
-      bindTexture(dye.read.texture, 0),
+      bindTexture(fluidTargets.dye.read.texture, 0),
     );
-    blit(dye.write);
-    dye.swap();
+    blit(fluidTargets.dye.write);
+    fluidTargets.dye.swap();
   }
 
   function step(delta: number) {
@@ -627,105 +672,105 @@ export function createLiquid(
     gl!.uniform2f(curlProgram.uniforms.texelSize, texelX, texelY);
     gl!.uniform1i(
       curlProgram.uniforms.uVelocity,
-      bindTexture(velocity.read.texture, 0),
+      bindTexture(fluidTargets.velocity.read.texture, 0),
     );
-    blit(curl);
+    blit(fluidTargets.curl);
 
     gl!.useProgram(vorticityProgram.program);
     gl!.uniform2f(vorticityProgram.uniforms.texelSize, texelX, texelY);
     gl!.uniform1i(
       vorticityProgram.uniforms.uVelocity,
-      bindTexture(velocity.read.texture, 0),
+      bindTexture(fluidTargets.velocity.read.texture, 0),
     );
     gl!.uniform1i(
       vorticityProgram.uniforms.uCurl,
-      bindTexture(curl.texture, 1),
+      bindTexture(fluidTargets.curl.texture, 1),
     );
     gl!.uniform1f(vorticityProgram.uniforms.uCurlStrength, config.curl);
     gl!.uniform1f(vorticityProgram.uniforms.uDt, DT);
-    blit(velocity.write);
-    velocity.swap();
+    blit(fluidTargets.velocity.write);
+    fluidTargets.velocity.swap();
 
     gl!.useProgram(divergenceProgram.program);
     gl!.uniform2f(divergenceProgram.uniforms.texelSize, texelX, texelY);
     gl!.uniform1i(
       divergenceProgram.uniforms.uVelocity,
-      bindTexture(velocity.read.texture, 0),
+      bindTexture(fluidTargets.velocity.read.texture, 0),
     );
-    blit(divergence);
+    blit(fluidTargets.divergence);
 
     gl!.useProgram(clearProgram.program);
     gl!.uniform1i(
       clearProgram.uniforms.uTexture,
-      bindTexture(pressure.read.texture, 0),
+      bindTexture(fluidTargets.pressure.read.texture, 0),
     );
     gl!.uniform1f(
       clearProgram.uniforms.uValue,
       Math.pow(config.pressure, delta * 60),
     );
-    blit(pressure.write);
-    pressure.swap();
+    blit(fluidTargets.pressure.write);
+    fluidTargets.pressure.swap();
 
     gl!.useProgram(pressureProgram.program);
     gl!.uniform2f(pressureProgram.uniforms.texelSize, texelX, texelY);
     gl!.uniform1i(
       pressureProgram.uniforms.uDivergence,
-      bindTexture(divergence.texture, 0),
+      bindTexture(fluidTargets.divergence.texture, 0),
     );
     for (let i = 0; i < config.pressureIterations; i++) {
       gl!.uniform1i(
         pressureProgram.uniforms.uPressure,
-        bindTexture(pressure.read.texture, 1),
+        bindTexture(fluidTargets.pressure.read.texture, 1),
       );
-      blit(pressure.write);
-      pressure.swap();
+      blit(fluidTargets.pressure.write);
+      fluidTargets.pressure.swap();
     }
 
     gl!.useProgram(gradientProgram.program);
     gl!.uniform2f(gradientProgram.uniforms.texelSize, texelX, texelY);
     gl!.uniform1i(
       gradientProgram.uniforms.uPressure,
-      bindTexture(pressure.read.texture, 0),
+      bindTexture(fluidTargets.pressure.read.texture, 0),
     );
     gl!.uniform1i(
       gradientProgram.uniforms.uVelocity,
-      bindTexture(velocity.read.texture, 1),
+      bindTexture(fluidTargets.velocity.read.texture, 1),
     );
-    blit(velocity.write);
-    velocity.swap();
+    blit(fluidTargets.velocity.write);
+    fluidTargets.velocity.swap();
 
     gl!.useProgram(advectProgram.program);
     gl!.uniform2f(advectProgram.uniforms.texelSize, texelX, texelY);
     gl!.uniform1i(
       advectProgram.uniforms.uVelocity,
-      bindTexture(velocity.read.texture, 0),
+      bindTexture(fluidTargets.velocity.read.texture, 0),
     );
     gl!.uniform1i(
       advectProgram.uniforms.uSource,
-      bindTexture(velocity.read.texture, 0),
+      bindTexture(fluidTargets.velocity.read.texture, 0),
     );
     gl!.uniform1f(advectProgram.uniforms.uDt, DT);
     gl!.uniform1f(
       advectProgram.uniforms.uDissipation,
       Math.pow(config.velocityDissipation, delta * 60),
     );
-    blit(velocity.write);
-    velocity.swap();
+    blit(fluidTargets.velocity.write);
+    fluidTargets.velocity.swap();
 
     gl!.uniform1i(
       advectProgram.uniforms.uVelocity,
-      bindTexture(velocity.read.texture, 0),
+      bindTexture(fluidTargets.velocity.read.texture, 0),
     );
     gl!.uniform1i(
       advectProgram.uniforms.uSource,
-      bindTexture(dye.read.texture, 1),
+      bindTexture(fluidTargets.dye.read.texture, 1),
     );
     gl!.uniform1f(
       advectProgram.uniforms.uDissipation,
       Math.pow(config.densityDissipation, delta * 60),
     );
-    blit(dye.write);
-    dye.swap();
+    blit(fluidTargets.dye.write);
+    fluidTargets.dye.swap();
   }
 
   function render() {
@@ -737,7 +782,7 @@ export function createLiquid(
     );
     gl!.uniform1i(
       displayProgram.uniforms.uFluid,
-      bindTexture(dye.read.texture, 1),
+      bindTexture(fluidTargets.dye.read.texture, 1),
     );
     gl!.uniform3f(
       displayProgram.uniforms.uColor,
@@ -753,7 +798,12 @@ export function createLiquid(
     blit(null);
   }
 
-  const queued: Array<[number, number, number, number]> = [];
+  const MAX_PENDING_SPLATS = 64;
+  const MAX_SPLATS_PER_FRAME = 8;
+  type Splat = [number, number, number, number];
+  const queued: Splat[] = [];
+  // Keep the latest pointer position without replaying a drag over later frames.
+  const pointerSplats = new Map<number, Splat>();
 
   let raf = 0;
   let lastTime = performance.now();
@@ -770,22 +820,31 @@ export function createLiquid(
 
   function frame(now: number) {
     if (destroyed) return;
-    if (!visible) {
+    if (!visible || document.hidden) {
       running = false;
       return;
     }
     const delta = Math.min((now - lastTime) / 1000, 1 / 30);
     lastTime = now;
-    if (queued.length > 0) {
+    if (queued.length > 0 || pointerSplats.size > 0) {
       idleAt = now + idleDelayMs();
-      while (queued.length > 0) {
-        const [x, y, dx, dy] = queued.pop()!;
-        applySplat(x, y, dx, dy);
+      let remaining = MAX_SPLATS_PER_FRAME;
+      // Reserve one slot so continuous pointer motion cannot starve API calls.
+      const pointerBudget = remaining - (queued.length > 0 ? 1 : 0);
+      let appliedPointers = 0;
+      for (const [id, splat] of pointerSplats) {
+        if (appliedPointers >= pointerBudget) break;
+        pointerSplats.delete(id);
+        applySplat(...splat);
+        appliedPointers++;
+        remaining--;
       }
+      const count = Math.min(queued.length, remaining);
+      for (let i = 0; i < count; i++) applySplat(...queued.shift()!);
     }
     step(delta);
     render();
-    if (now >= idleAt && !contentDirty) {
+    if (now >= idleAt && !contentDirty && queued.length === 0 && pointerSplats.size === 0) {
       running = false;
       return;
     }
@@ -793,7 +852,7 @@ export function createLiquid(
   }
 
   function start() {
-    if (destroyed || running || !visible) return;
+    if (destroyed || running || !visible || document.hidden) return;
     running = true;
     lastTime = performance.now();
     raf = requestAnimationFrame(frame);
@@ -813,17 +872,63 @@ export function createLiquid(
 
   const pointers = new Map<number, { x: number; y: number }>();
 
+  function enqueueSplat(splat: Splat) {
+    if (queued.length >= MAX_PENDING_SPLATS) queued.shift();
+    queued.push(splat);
+  }
+
+  function enqueuePointerSplat(id: number, splat: Splat) {
+    const previous = pointerSplats.get(id);
+    if (previous) {
+      splat[2] += previous[2];
+      splat[3] += previous[3];
+    } else if (pointerSplats.size >= MAX_SPLATS_PER_FRAME) {
+      pointerSplats.delete(pointerSplats.keys().next().value!);
+    }
+    pointerSplats.set(id, splat);
+  }
+
+  function suspend() {
+    cancelAnimationFrame(raf);
+    running = false;
+    pointers.clear();
+    pointerSplats.clear();
+  }
+
+  function onVisibilityChange() {
+    if (document.hidden) suspend();
+    else start();
+  }
+  document.addEventListener("visibilitychange", onVisibilityChange);
+
+  const rectCache = createRectCache(output);
+
   function onPointerMove(event: PointerEvent) {
-    if (reducedMotion) return;
-    const rect = output.getBoundingClientRect();
+    if (destroyed || reducedMotion || !visible || document.hidden) return;
+    const rect = rectCache.current;
     const px = event.clientX - rect.left;
     const py = event.clientY - rect.top;
+    if (px < 0 || px > rect.width || py < 0 || py > rect.height) {
+      pointers.delete(event.pointerId);
+      return;
+    }
     const previous = pointers.get(event.pointerId);
     pointers.set(event.pointerId, { x: px, y: py });
     if (!previous) return;
     const dx = (px - previous.x) * config.force;
     const dy = -(py - previous.y) * config.force;
-    queued.push([px / rect.width, 1 - py / rect.height, dx, dy]);
+    enqueuePointerSplat(event.pointerId, [px / rect.width, 1 - py / rect.height, dx, dy]);
+    start();
+  }
+
+  function onPointerDown(event: PointerEvent) {
+    if (destroyed || reducedMotion || !visible || document.hidden) return;
+    const rect = output.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    if (x < 0 || x > rect.width || y < 0 || y > rect.height) return;
+    pointers.set(event.pointerId, { x, y });
+    enqueuePointerSplat(event.pointerId, [x / rect.width, 1 - y / rect.height, 1, 1]);
     start();
   }
 
@@ -831,8 +936,16 @@ export function createLiquid(
     pointers.delete(event.pointerId);
   }
 
-  const listenTarget = output.parentElement ?? output;
-  listenTarget.addEventListener("pointermove", onPointerMove as EventListener);
+  const listenTarget = window;
+  listenTarget.addEventListener("pointerdown", onPointerDown as EventListener, {
+    passive: true,
+  });
+  listenTarget.addEventListener("pointermove", onPointerMove as EventListener, { passive: true });
+  listenTarget.addEventListener(
+    "pointerup",
+    onPointerLeave as EventListener,
+    { passive: true },
+  );
   listenTarget.addEventListener(
     "pointerleave",
     onPointerLeave as EventListener,
@@ -842,7 +955,8 @@ export function createLiquid(
     onPointerLeave as EventListener,
   );
 
-  const observer = new ResizeObserver(() => {
+  const observer = createCanvasResizeObserver(() => {
+    if (destroyed) return;
     syncCanvasSize();
     start();
   });
@@ -850,48 +964,76 @@ export function createLiquid(
 
   const intersection = new IntersectionObserver((entries) => {
     visible = entries[entries.length - 1]?.isIntersecting ?? true;
+    if (destroyed) return;
     if (visible) start();
+    else suspend();
   });
   intersection.observe(output);
 
   return {
     splat(x, y, dx, dy) {
-      if (reducedMotion) return;
-      queued.push([x, y, dx, dy]);
+      if (destroyed || reducedMotion) return;
+      // Explicit API input is retained while suspended, up to the queue limit.
+      enqueueSplat([x, y, dx, dy]);
       start();
     },
     setOptions(next) {
+      if (destroyed) return;
       if (
         !Object.entries(next).some(
           ([key, value]) => config[key as keyof LiquidOptions] !== value,
         )
       )
         return;
-      const { simResolution, dyeResolution, ...rest } = next;
-      void simResolution;
-      void dyeResolution;
-      Object.assign(config, rest);
+      const simResolution = next.simResolution ?? config.simResolution;
+      const dyeResolution = next.dyeResolution ?? config.dyeResolution;
+      const resolutionChanged =
+        simResolution !== config.simResolution ||
+        dyeResolution !== config.dyeResolution;
+
+      if (resolutionChanged) {
+        rebuildFluidTargets(simResolution, dyeResolution);
+        config.simResolution = simResolution;
+        config.dyeResolution = dyeResolution;
+        updateTexelSize();
+      }
+
+      Object.assign(config, next);
       start();
     },
     resize() {
+      if (destroyed) return;
       syncCanvasSize();
       start();
     },
     destroy() {
+      if (destroyed) return;
       destroyed = true;
+      queued.length = 0;
+      suspend();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      rectCache.destroy();
       cancelAnimationFrame(raf);
       observer.disconnect();
       intersection.disconnect();
       motionQuery.removeEventListener("change", onMotionChange);
-      releaseAll();
+      releaseTargets(fluidTargets);
       gl!.deleteTexture(contentTexture);
       programs.forEach((program) => gl!.deleteProgram(program));
       shaders.forEach((shader) => gl!.deleteShader(shader));
       gl!.deleteBuffer(quad);
       if (htmlInCanvas) paintable.onpaint = null;
       listenTarget.removeEventListener(
+        "pointerdown",
+        onPointerDown as EventListener,
+      );
+      listenTarget.removeEventListener(
         "pointermove",
         onPointerMove as EventListener,
+      );
+      listenTarget.removeEventListener(
+        "pointerup",
+        onPointerLeave as EventListener,
       );
       listenTarget.removeEventListener(
         "pointerleave",

@@ -1,3 +1,7 @@
+import { getCanvasPixelRatio, createCanvasResizeObserver } from "../canvas-viewport";
+import { prepareHtmlInCanvas, drawHtmlInCanvas } from "../html-in-canvas";
+import { createRectCache } from "../rect-cache";
+
 export type BubbleOptions = {
   size?: number;
   trail?: number;
@@ -265,6 +269,8 @@ export function createBubble(
     typeof paintable.requestPaint === "function",
   );
 
+  if (htmlInCanvas) prepareHtmlInCanvas(source, content);
+
   let contentDirty = false;
   let wake = () => {};
 
@@ -272,7 +278,7 @@ export function createBubble(
     paintable.onpaint = () => {
       try {
         sourceCtx!.reset();
-        sourceCtx!.drawElementImage!(content, 0, 0);
+        drawHtmlInCanvas(source, sourceCtx!, content);
         contentDirty = true;
         wake();
       } catch {}
@@ -339,7 +345,7 @@ export function createBubble(
   let contentMaxX = 1;
 
   function syncCanvasSize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = getCanvasPixelRatio(output, gl!);
     const width = Math.max(1, Math.round(output.clientWidth * dpr));
     const height = Math.max(1, Math.round(output.clientHeight * dpr));
     if (output.width !== width || output.height !== height) {
@@ -561,8 +567,10 @@ export function createBubble(
   wake = start;
   start();
 
+  const rectCache = createRectCache(output);
+
   function onPointerMove(event: PointerEvent) {
-    const rect = output.getBoundingClientRect();
+    const rect = rectCache.current;
     targetX = event.clientX - rect.left;
     targetY = event.clientY - rect.top;
     if (!hasPointer) {
@@ -596,7 +604,7 @@ export function createBubble(
   }
   motionQuery.addEventListener("change", onMotionChange);
 
-  const observer = new ResizeObserver(() => {
+  const observer = createCanvasResizeObserver(() => {
     syncCanvasSize();
     start();
   });
@@ -626,6 +634,7 @@ export function createBubble(
     },
     destroy() {
       destroyed = true;
+      rectCache.destroy();
       cancelAnimationFrame(raf);
       content.removeEventListener("pointermove", onPointerMove);
       content.removeEventListener("pointerleave", onPointerLeave);

@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Laser } from "@/lib/Laser/Laser";
+import { Laser } from "@/components/docs/live/Laser";
 
 const CONTROLS = {
   speed: scrub("Speed", 0.3, { min: 0, max: 4, step: 0.1, decimals: 1 }),

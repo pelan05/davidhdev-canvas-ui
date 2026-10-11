@@ -1,3 +1,5 @@
+import { getCanvasPixelRatio, createCanvasResizeObserver } from "../canvas-viewport";
+import { prepareHtmlInCanvas, drawHtmlInCanvas } from "../html-in-canvas";
 export interface HexFloatOptions {
   /** Width of each hex tile in CSS pixels. */
   size?: number;
@@ -645,6 +647,12 @@ export function createHexFloat(
   });
   if (!gl || gl.isContextLost()) return null;
 
+  const supportsFloatTargets = Boolean(
+    gl.getExtension("EXT_color_buffer_float") ||
+      gl.getExtension("EXT_color_buffer_half_float"),
+  );
+  if (!supportsFloatTargets) return null;
+
   const sourceCtx = source.getContext("2d") as ElementImageContext | null;
   const paintable = source as PaintableCanvas;
   const htmlInCanvas = Boolean(
@@ -653,6 +661,8 @@ export function createHexFloat(
     typeof paintable.requestPaint === "function",
   );
 
+  if (htmlInCanvas) prepareHtmlInCanvas(source, content);
+
   let contentDirty = false;
   let wake = () => {};
 
@@ -660,7 +670,7 @@ export function createHexFloat(
     paintable.onpaint = () => {
       try {
         sourceCtx!.reset();
-        sourceCtx!.drawElementImage!(content, 0, 0);
+        drawHtmlInCanvas(source, sourceCtx!, content);
         contentDirty = true;
         wake();
       } catch {}
@@ -704,7 +714,6 @@ export function createHexFloat(
   gl.enableVertexAttribArray(0);
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
-  gl.getExtension("EXT_color_buffer_float");
   const supportsLinear = Boolean(gl.getExtension("OES_texture_float_linear"));
   const filtering = supportsLinear ? gl.LINEAR : gl.NEAREST;
 
@@ -1114,7 +1123,7 @@ export function createHexFloat(
   }
 
   function syncCanvasSize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = getCanvasPixelRatio(output, gl!);
     const width = Math.max(1, Math.round(output.clientWidth * dpr));
     const height = Math.max(1, Math.round(output.clientHeight * dpr));
     if (output.width !== width || output.height !== height) {
@@ -1126,11 +1135,11 @@ export function createHexFloat(
       Math.max(0.05, content.clientWidth / Math.max(output.clientWidth, 1)),
     );
     if (htmlInCanvas) {
-      const cssWidth = Math.max(1, Math.round(source.clientWidth));
-      const cssHeight = Math.max(1, Math.round(source.clientHeight));
-      if (source.width !== cssWidth * dpr || source.height !== cssHeight * dpr) {
-        source.width = cssWidth * dpr;
-        source.height = cssHeight * dpr;
+      const sourceWidth = Math.max(1, Math.round(source.clientWidth * dpr));
+      const sourceHeight = Math.max(1, Math.round(source.clientHeight * dpr));
+      if (source.width !== sourceWidth || source.height !== sourceHeight) {
+        source.width = sourceWidth;
+        source.height = sourceHeight;
       }
       paintable.requestPaint!();
     }
@@ -1556,7 +1565,7 @@ export function createHexFloat(
   }
   motionQuery.addEventListener("change", onMotionChange);
 
-  const observer = new ResizeObserver(() => {
+  const observer = createCanvasResizeObserver(() => {
     syncCanvasSize();
     start();
   });

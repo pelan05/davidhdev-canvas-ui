@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { VHS } from "@/lib/VHS/VHS";
+import { VHS } from "@/components/docs/live/VHS";
 
 const CONTROLS = {
   speed: scrub("Speed", 0.5, { min: 0, max: 4, step: 0.1, decimals: 1 }),

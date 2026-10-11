@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Glass } from "@/lib/Glass/Glass";
+import { Glass } from "@/components/docs/live/Glass";
 
 const CONTROLS = {
   shape: radio("Lens shape", "circle", [

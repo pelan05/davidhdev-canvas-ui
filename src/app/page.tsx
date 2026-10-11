@@ -3,11 +3,13 @@ import type { Metadata } from "next";
 import { Agents } from "@/components/landing/agents";
 import { Cta } from "@/components/landing/cta";
 import { Faq } from "@/components/landing/faq";
+import { FeaturedVideos } from "@/components/landing/featured-videos";
 import { Frameworks } from "@/components/landing/frameworks";
 import { Gallery } from "@/components/landing/gallery";
 import { Hero } from "@/components/landing/hero";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { Navbar } from "@/components/landing/navbar";
+import { Newsletter } from "@/components/landing/newsletter";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -18,7 +20,7 @@ const JSON_LD = {
   "@type": "SoftwareSourceCode",
   name: "Canvas UI",
   description:
-    "A free, open source component library of creative canvas and WebGL effects for React, Solid, Preact, Vue, Svelte, and vanilla JS.",
+    "A free, open source component library of creative canvas effects for React, Solid, Preact, Vue, Svelte, and vanilla JS. Every effect ships as WebGL and WebGPU (via vgpu) builds.",
   url: "https://canvasui.dev",
   codeRepository: "https://github.com/DavidHDev/canvas-ui",
   programmingLanguage: "TypeScript",
@@ -52,10 +54,12 @@ export default function Home() {
           />
           <Hero />
           <Gallery />
+          <FeaturedVideos />
           <HowItWorks />
           <Frameworks />
           <Agents />
           <Faq />
+          <Newsletter />
         </div>
         <Cta />
       </main>

@@ -55,7 +55,7 @@ function PickStage() {
 
 function TerminalStage() {
   return (
-    <div className="hiw-phase-enter flex h-full flex-col gap-1.5 overflow-hidden p-4 font-mono text-[11px] leading-6 sm:text-[12.5px]">
+    <div className="hiw-phase-enter flex h-full flex-col gap-1.5 overflow-hidden p-4 font-mono text-[11px] leading-6 tracking-[-0.02em] sm:text-xs">
       <div className="flex overflow-hidden whitespace-nowrap">
         <span className="shrink-0 text-muted-foreground">$&nbsp;</span>
         <span
@@ -171,7 +171,7 @@ export function HowItWorks() {
 
         <Reveal
           delay={80}
-          className="mt-12 grid grid-cols-1 items-start gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-16"
+          className="mt-12 grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-16"
         >
           <ol className="order-2 flex flex-col lg:order-1">
             {STEPS.map((step, index) => {
@@ -233,24 +233,22 @@ export function HowItWorks() {
 
           <div
             ref={stageRef}
-            className="order-1 rounded-2xl border border-border/60 bg-muted/30 p-2 lg:order-2"
+            className="order-1 min-w-0 rounded-xl border border-border/60 bg-muted/30 px-2 pb-2 lg:order-2"
           >
-            <div className="overflow-hidden rounded-lg border border-border/60 bg-background">
-              <div className="flex items-center gap-2 border-b border-border/60 px-4 py-2.5">
-                <span className="flex gap-1.5" aria-hidden>
-                  <span className="size-2.5 rounded-full bg-foreground/10" />
-                  <span className="size-2.5 rounded-full bg-foreground/10" />
-                  <span className="size-2.5 rounded-full bg-foreground/10" />
-                </span>
-                <span className="ml-2 font-mono text-[11px] text-muted-foreground">
-                  {STEPS[phase].window}
-                </span>
-              </div>
-              <div className="h-64 sm:h-72">
-                {phase === 0 && <PickStage key={tick} />}
-                {phase === 1 && <TerminalStage key={tick} />}
-                {phase === 2 && <EditStage key={tick} />}
-              </div>
+            <div className="flex items-center gap-2 px-2 py-2">
+              <span className="flex gap-1.5" aria-hidden>
+                <span className="size-2.5 rounded-full bg-foreground/10" />
+                <span className="size-2.5 rounded-full bg-foreground/10" />
+                <span className="size-2.5 rounded-full bg-foreground/10" />
+              </span>
+              <span className="ml-2 font-mono text-[11px] text-muted-foreground">
+                {STEPS[phase].window}
+              </span>
+            </div>
+            <div className="h-64 min-w-0 overflow-hidden rounded-lg border border-dashed border-border/70 bg-background sm:h-72">
+              {phase === 0 && <PickStage key={tick} />}
+              {phase === 1 && <TerminalStage key={tick} />}
+              {phase === 2 && <EditStage key={tick} />}
             </div>
           </div>
         </Reveal>

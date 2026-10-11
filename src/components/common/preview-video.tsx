@@ -21,14 +21,16 @@ export function PreviewVideo({
 
     let hovered = false;
     let primed = false;
+    let cancelled = false;
 
     const prime = () => {
       if (primed) return;
       primed = true;
+      video.preload = "metadata";
       void video
         .play()
         .then(() => {
-          if (hovered) return;
+          if (cancelled || hovered) return;
           video.pause();
           video.currentTime = 0;
         })
@@ -63,13 +65,15 @@ export function PreviewVideo({
     card.addEventListener("focusin", play);
     card.addEventListener("focusout", pause);
     return () => {
+      cancelled = true;
       io.disconnect();
+      video.pause();
       card.removeEventListener("pointerenter", play);
       card.removeEventListener("pointerleave", pause);
       card.removeEventListener("focusin", play);
       card.removeEventListener("focusout", pause);
     };
-  }, []);
+  }, [src]);
 
   return (
     <video
@@ -78,7 +82,7 @@ export function PreviewVideo({
       loop
       muted
       playsInline
-      preload="metadata"
+      preload="none"
       disablePictureInPicture
       aria-hidden="true"
       tabIndex={-1}

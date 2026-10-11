@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Asciify } from "@/lib/Asciify/Asciify";
+import { Asciify } from "@/components/docs/live/Asciify";
 
 const CONTROLS = {
   charset: radio("Charset", "ascii", [

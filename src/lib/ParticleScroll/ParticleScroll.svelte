@@ -91,6 +91,7 @@
   <canvas
     bind:this={outputEl}
     aria-hidden="true"
+    style:display={native ? "block" : "none"}
     style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;"
   ></canvas>
 </div>

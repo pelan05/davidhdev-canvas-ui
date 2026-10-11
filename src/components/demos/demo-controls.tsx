@@ -169,15 +169,21 @@ export const DemoControlsTargetContext = createContext<HTMLElement | null>(
 function ShareLinkButton() {
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     return () => {
+      mountedRef.current = false;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
   const copy = async () => {
     await navigator.clipboard.writeText(window.location.href);
+    // play() fires an audible sound, so it's worth skipping once this
+    // button is gone -- unlike the setState calls below, a sound with no
+    // visible source is actually perceivable after unmount.
+    if (!mountedRef.current) return;
     play("bloom");
     setCopied(true);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -383,7 +389,7 @@ export function DemoControls<S extends ControlSchema>({
             transition={{ duration: open ? 0.3 : 0.15, ease: EASE }}
             className="w-72 rounded-2xl border border-border/60 bg-background/85 p-3 shadow-xl shadow-black/5 backdrop-blur-xl backdrop-saturate-150"
           >
-            <div className="mb-2 flex items-center justify-between pl-1">
+                <div className="mb-2 flex items-center justify-between pl-1">
               <p className="text-[13px] font-semibold tracking-[-0.01em]">
                 {title}
               </p>

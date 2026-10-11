@@ -11,7 +11,7 @@ import { LiquidDemo } from "@/demos/liquid-demo";
 export const metadata: Metadata = {
   title: "Liquid",
   description:
-    "Wraps your content in a canvas using the html-in-canvas API and runs a pointer-driven WebGL fluid simulation over it. No dependencies, works in any framework.",
+    "Wraps your content in a canvas using the html-in-canvas API and runs a pointer-driven GPU fluid simulation over it, in WebGL or WebGPU via vgpu. No dependencies, works in any framework.",
   alternates: { canonical: "/docs/components/liquid" },
 };
 

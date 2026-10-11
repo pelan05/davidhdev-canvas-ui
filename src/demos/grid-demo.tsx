@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Grid } from "@/lib/Grid/Grid";
+import { Grid } from "@/components/docs/live/Grid";
 
 const CONTROLS = {
   tileSize: scrub("Tile size", 150, {

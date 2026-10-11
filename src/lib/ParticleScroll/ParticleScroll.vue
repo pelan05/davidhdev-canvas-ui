@@ -91,6 +91,7 @@ watch(
     <canvas
       ref="outputEl"
       aria-hidden="true"
+      :style="{ display: native ? 'block' : 'none' }"
       style="
         position: absolute;
         inset: 0;

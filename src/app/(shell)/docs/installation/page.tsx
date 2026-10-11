@@ -126,19 +126,23 @@ For production, Chrome offers an [origin trial](https://developer.chrome.com/blo
 
 Beyond that, TypeScript is recommended, since every file ships as typed source. React components target React 19, Solid components target Solid 1.9, Preact components target Preact 10, Vue components target Vue 3.5, and Svelte components target Svelte 5. Any dependencies a component needs are installed by the CLI and listed on its docs page.
 
+Renderers: every effect has a WebGL build and a WebGPU build where available. WebGL is the default. WebGPU builds use vgpu, WGSL shaders, and the -webgpu registry suffix. Read the rendering guide: https://canvasui.dev/docs/rendering
+
 ## Install with the CLI
 
-Every component has a registry entry per framework (react, solid, preact, vue, svelte, vanilla):
+Every component has a registry entry per framework and per renderer: six WebGL entries and six WebGPU entries. Pick your package manager, renderer, and framework below, and the docs remember your choices everywhere.
 
 \`\`\`sh
 npx shadcn@latest add @canvas-ui/liquid-react
 \`\`\`
 
+The renderer selector switches the command between the WebGL item and the WebGPU item. WebGPU registry names add -webgpu after the framework, for example @canvas-ui/liquid-react-webgpu.
+
 The CLI drops the file into components/canvasui/ in your project (Svelte: src/lib/components/canvasui/, so the \`$lib\` import resolves). If you have not used shadcn before, run \`npx shadcn@latest init\` first.
 
 ## Install manually
 
-Open the component page, switch the code block to your framework, copy the file into your project, and import it.
+Open the component page, switch the code block to your framework and renderer, copy the file into your project, and import it.
 
 ## Use it
 
@@ -148,8 +152,11 @@ Wrap the part of your interface the effect should run over. Props are optional a
 ${USAGE[0].source}
 \`\`\`
 
+For vanilla WebGPU, import from LiquidWebGPU.ts instead of LiquidVanilla.ts. The createLiquid call is the same.
+
 ## Next steps
 
+- Read the rendering guide: https://canvasui.dev/docs/rendering
 - Try Liquid, the first component: https://canvasui.dev/docs/components/liquid
 - Set up the MCP server: https://canvasui.dev/docs/mcp
 `;
@@ -217,16 +224,28 @@ export default async function InstallationPage() {
           dependencies a component needs are installed by the CLI and listed on
           its docs page.
         </p>
+        <p>
+          Renderers: every effect has a WebGL build and a WebGPU build where
+          available. WebGL is the default. WebGPU builds use <code>vgpu</code>,
+          WGSL shaders, and the <code>-webgpu</code> registry suffix. Read the{" "}
+          <a href="/docs/rendering">rendering guide</a>.
+        </p>
 
         <h2>Install with the CLI</h2>
         <p>
-          Every component has a registry entry per framework. Pick your package
-          manager and framework below, and the docs remember your choice
+          Every component has a registry entry per framework and per renderer:
+          six WebGL entries and six WebGPU entries. Pick your package manager,
+          renderer, and framework below, and the docs remember your choices
           everywhere.
         </p>
         <div className="not-typeset my-6">
-          <InstallTabs item="liquid" />
+          <InstallTabs item="liquid" hasWebGPU />
         </div>
+        <p>
+          The renderer selector switches the command between the WebGL item and
+          the WebGPU item. WebGPU registry names add <code>-webgpu</code> after
+          the framework, for example <code>@canvas-ui/liquid-react-webgpu</code>.
+        </p>
         <p>
           The CLI drops the file into <code>components/canvasui/</code> in your
           project (Svelte: <code>src/lib/components/canvasui/</code>, so the{" "}
@@ -237,8 +256,8 @@ export default async function InstallationPage() {
         <h2>Install manually</h2>
         <p>
           Prefer not to use a CLI? Open the component page, switch the code
-          block to your framework, copy the file into your project, and import
-          it.
+          block to your framework and renderer, copy the file into your project,
+          and import it.
         </p>
 
         <h2>Use it</h2>
@@ -249,11 +268,21 @@ export default async function InstallationPage() {
         <div className="not-typeset my-6">
           <CodeTabs variants={usageVariants} />
         </div>
+        <p>
+          For vanilla WebGPU, import from <code>LiquidWebGPU.ts</code> instead
+          of <code>LiquidVanilla.ts</code>. The <code>createLiquid</code> call is
+          the same.
+        </p>
 
         <h2>Next steps</h2>
         <div className="mt-6">
           <LinkCards
             items={[
+              {
+                href: "/docs/rendering",
+                title: "Rendering",
+                description: "Choose WebGL or WebGPU for each component.",
+              },
               {
                 href: "/docs/components/liquid",
                 title: "Liquid",

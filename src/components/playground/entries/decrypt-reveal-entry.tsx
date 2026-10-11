@@ -9,7 +9,7 @@ import {
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
 import { MockSite } from "@/components/playground/mock-site";
-import { DecryptReveal } from "@/lib/DecryptReveal/DecryptReveal";
+import { DecryptReveal } from "@/components/docs/live/DecryptReveal";
 
 const CONTROLS = {
   radius: scrub("Radius", 400, { min: 60, max: 900, step: 10, decimals: 0 }),

@@ -118,6 +118,7 @@ export function ParticleScroll(props: ParticleScrollProps) {
         ref={outputEl}
         aria-hidden="true"
         style={{
+          display: native() ? "block" : "none",
           position: "absolute",
           inset: "0",
           width: "100%",

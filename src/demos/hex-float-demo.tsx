@@ -12,7 +12,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { HexFloat } from "@/lib/HexFloat/HexFloat";
+import { HexFloat } from "@/components/docs/live/HexFloat";
 
 const CONTROLS = {
   size: scrub("Size", 160, { min: 24, max: 160, step: 2, decimals: 0 }),

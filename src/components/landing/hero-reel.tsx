@@ -93,6 +93,7 @@ export function HeroReel({
     if (!holder) return;
     const components = itemsRef.current;
     const count = components.length;
+    if (count === 0) return;
     const step = (Math.PI * 2) / count;
     const fitMaxHalfHeight = step * FIT_MAX_RATIO;
     const wideHalfHeight = step * WIDE_RATIO;
@@ -214,7 +215,9 @@ export function HeroReel({
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(holder);
 
+    let disposed = false;
     document.fonts?.ready.then(() => {
+      if (disposed) return;
       rows.forEach((row, i) => {
         row.aspect = drawLabel(
           row.texture.image as HTMLCanvasElement,
@@ -255,12 +258,14 @@ export function HeroReel({
       "(prefers-reduced-motion: reduce)",
     ).matches;
     let tick = 0;
-    const interval = window.setInterval(() => {
-      if (!pausedRef.current && !reducedMotion && !document.hidden) {
-        tick += 1;
-        onActiveChangeRef.current?.(tick % count);
-      }
-    }, 5000);
+    const interval = reducedMotion
+      ? null
+      : window.setInterval(() => {
+          if (!pausedRef.current && !document.hidden) {
+            tick += 1;
+            onActiveChangeRef.current?.(tick % count);
+          }
+        }, 5000);
 
     let rotation = 0;
     let push = 0;
@@ -306,6 +311,10 @@ export function HeroReel({
         row.mesh.renderOrder = Math.round(row.alpha * 100);
       });
       renderer.render(scene, camera);
+      if (reducedMotion) {
+        running = false;
+        return;
+      }
       raf = requestAnimationFrame(animate);
     };
 
@@ -344,8 +353,9 @@ export function HeroReel({
     start();
 
     return () => {
+      disposed = true;
       stop();
-      window.clearInterval(interval);
+      if (interval !== null) window.clearInterval(interval);
       themeObserver.disconnect();
       resizeObserver.disconnect();
       viewObserver.disconnect();

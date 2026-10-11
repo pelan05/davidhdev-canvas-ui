@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Ripple } from "@/lib/Ripple/Ripple";
+import { Ripple } from "@/components/docs/live/Ripple";
 
 const CONTROLS = {
   trigger: radio("Trigger", "click", [

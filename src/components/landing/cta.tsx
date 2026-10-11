@@ -62,6 +62,7 @@ export function Cta() {
                   </Link>
                 </div>
               </div>
+
               <Footer />
             </div>
           </Blaze>

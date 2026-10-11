@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Clouds } from "@/lib/Clouds/Clouds";
+import { Clouds } from "@/components/docs/live/Clouds";
 
 const AUTO_COLOR = "auto";
 

@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Bend } from "@/lib/Bend/Bend";
+import { Bend } from "@/components/docs/live/Bend";
 
 type BendDirection = "out" | "in";
 

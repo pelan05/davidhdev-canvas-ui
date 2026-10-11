@@ -50,16 +50,17 @@ function GalleryCard({
 export function GalleryMarquee() {
   const hostRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
+  const [inView, setInView] = useState(false);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
     const io = new IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setReady(true);
-          io.disconnect();
-        }
+        const entry = entries[entries.length - 1];
+        if (!entry) return;
+        if (entry.isIntersecting) setReady(true);
+        setInView(entry.isIntersecting);
       },
       { rootMargin: "600px" },
     );
@@ -76,6 +77,7 @@ export function GalleryMarquee() {
               className="marquee-track"
               data-direction={row.direction}
               data-ready=""
+              data-in-view={inView ? "" : undefined}
               style={
                 { "--marquee-duration": row.duration } as React.CSSProperties
               }

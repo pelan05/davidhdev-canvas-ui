@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
 
-import { ParticleReveal } from "@/lib/ParticleReveal/ParticleReveal";
+import { ParticleReveal } from "@/components/docs/live/ParticleReveal";
 import { supportsHtmlInCanvas } from "@/lib/ParticleReveal/ParticleRevealVanilla";
 
 const emptySubscribe = () => () => {};
@@ -35,18 +35,51 @@ export function HeroReveal({
     let last = performance.now();
     let inView = true;
     let running = false;
+    const reducedMotionQuery = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    );
+    let reducedMotion = reducedMotionQuery.matches;
+    let hostRect = host.getBoundingClientRect();
+
+    const updateHostRect = () => {
+      hostRect = host.getBoundingClientRect();
+    };
+
+    const resizeObserver = new ResizeObserver(updateHostRect);
+    resizeObserver.observe(host);
+    window.addEventListener("resize", updateHostRect);
+    window.addEventListener("scroll", updateHostRect, { passive: true });
+
+    const stop = () => {
+      if (!running) return;
+      running = false;
+      cancelAnimationFrame(raf);
+    };
+
+    const start = () => {
+      if (reducedMotion || running || !inView || document.hidden) return;
+      running = true;
+      last = performance.now();
+      raf = requestAnimationFrame(tick);
+    };
 
     const onMove = (event: PointerEvent) => {
-      if (event.isTrusted) userActive = true;
+      if (event.isTrusted) {
+        userActive = true;
+        stop();
+      }
     };
     const onLeave = (event: PointerEvent) => {
-      if (event.isTrusted) userActive = false;
+      if (event.isTrusted) {
+        userActive = false;
+        start();
+      }
     };
     host.addEventListener("pointermove", onMove, true);
     host.addEventListener("pointerleave", onLeave, true);
 
     const tick = (now: number) => {
-      if (!inView || document.hidden) {
+      if (!inView || document.hidden || reducedMotion || userActive) {
         running = false;
         return;
       }
@@ -57,30 +90,18 @@ export function HeroReveal({
         const nx =
           0.5 + 0.34 * Math.sin(t * 0.37) + 0.14 * Math.sin(t * 0.93 + 1.7);
         const ny =
-          0.5 + 0.3 * Math.sin(t * 0.53 + 0.8) + 0.14 * Math.sin(t * 1.19 + 4.1);
-        const rect = host.getBoundingClientRect();
+          0.5 +
+          0.3 * Math.sin(t * 0.53 + 0.8) +
+          0.14 * Math.sin(t * 1.19 + 4.1);
         target.dispatchEvent(
           new PointerEvent("pointermove", {
             bubbles: true,
-            clientX: rect.left + rect.width * nx,
-            clientY: rect.top + rect.height * ny,
+            clientX: hostRect.left + hostRect.width * nx,
+            clientY: hostRect.top + hostRect.height * ny,
           }),
         );
       }
       raf = requestAnimationFrame(tick);
-    };
-
-    const start = () => {
-      if (running || !inView || document.hidden) return;
-      running = true;
-      last = performance.now();
-      raf = requestAnimationFrame(tick);
-    };
-
-    const stop = () => {
-      if (!running) return;
-      running = false;
-      cancelAnimationFrame(raf);
     };
 
     const observer = new IntersectionObserver((entries) => {
@@ -100,14 +121,24 @@ export function HeroReveal({
         start();
       }
     };
+    const onMotionChange = () => {
+      reducedMotion = reducedMotionQuery.matches;
+      if (reducedMotion) stop();
+      else start();
+    };
     document.addEventListener("visibilitychange", onVisibilityChange);
+    reducedMotionQuery.addEventListener("change", onMotionChange);
 
     start();
 
     return () => {
       stop();
       observer.disconnect();
+      resizeObserver.disconnect();
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      reducedMotionQuery.removeEventListener("change", onMotionChange);
+      window.removeEventListener("resize", updateHostRect);
+      window.removeEventListener("scroll", updateHostRect);
       host.removeEventListener("pointermove", onMove, true);
       host.removeEventListener("pointerleave", onLeave, true);
     };

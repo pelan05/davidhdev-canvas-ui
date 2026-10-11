@@ -9,7 +9,7 @@
 
 <p>
   <b>An open source library of creative, framework-agnostic components drawn on canvas.</b><br />
-  Fluid simulations, shader effects, and 3D scenes that run over your live, fully interactive interface.
+  Fluid simulations, shader effects, and 3D scenes that run over your live, fully interactive interface. WebGL or WebGPU via vgpu, your choice.
 </p>
 
 <p>
@@ -17,13 +17,14 @@
   <a href="https://canvasui.dev/docs">Docs</a> ·
   <a href="https://canvasui.dev/components">Components</a> ·
   <a href="https://canvasui.dev/playground">Playground</a> ·
-  <a href="https://canvasui.dev/docs/installation">Installation</a>
+  <a href="https://canvasui.dev/docs/installation">Installation</a> ·
+  <a href="https://canvasui.dev/docs/rendering">Rendering</a>
 </p>
 
 <p>
   <a href="https://github.com/DavidHDev/canvas-ui/stargazers"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/stars/DavidHDev/canvas-ui.svg?variant=secondary&size=sm&mode=dark" /><img alt="GitHub stars" src="https://shieldcn.dev/github/stars/DavidHDev/canvas-ui.svg?variant=secondary&size=sm&mode=light" /></picture></a>
   <a href="https://github.com/DavidHDev/canvas-ui/actions/workflows/ci.yml"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/ci/DavidHDev/canvas-ui.svg?variant=secondary&size=sm&mode=dark" /><img alt="CI status" src="https://shieldcn.dev/github/ci/DavidHDev/canvas-ui.svg?variant=secondary&size=sm&mode=light" /></picture></a>
-  <a href="https://canvasui.dev/components"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/components-33.svg?variant=secondary&size=sm&logo=shadcnui&mode=dark" /><img alt="33 components" src="https://shieldcn.dev/badge/components-33.svg?variant=secondary&size=sm&logo=shadcnui&mode=light" /></picture></a>
+  <a href="https://canvasui.dev/components"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/components-35.svg?variant=secondary&size=sm&logo=shadcnui&mode=dark" /><img alt="35 components" src="https://shieldcn.dev/badge/components-35.svg?variant=secondary&size=sm&logo=shadcnui&mode=light" /></picture></a>
   <a href="LICENSE.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/license-MIT_+_Commons_Clause.svg?variant=secondary&size=sm&logo=opensourceinitiative&mode=dark" /><img alt="License: MIT + Commons Clause" src="https://shieldcn.dev/badge/license-MIT_+_Commons_Clause.svg?variant=secondary&size=sm&logo=opensourceinitiative&mode=light" /></picture></a>
 </p>
 
@@ -42,16 +43,20 @@
 
 Most components use the experimental [HTML-in-canvas](https://chromestatus.com/feature/5172548013916160) API to read and redraw your live DOM. Text stays selectable, links stay clickable, and the page becomes a texture that fire, fluid, and glass distort in real time.
 
-Where it is not supported, components fall back to WebGL overlays, so every visitor gets a working page.
+Where it is not supported, components fall back to GPU overlays, so every visitor gets a working page.
 
 <table>
 <tr>
 <td align="center">🎨</td>
-<td><b>33 components</b> and counting: Liquid, Glass, Shatter, Force Field, Decrypt Reveal, and more</td>
+<td><b>35 components</b> and counting: Liquid, Glass, Shatter, Force Field, Decrypt Reveal, and more</td>
 </tr>
 <tr>
 <td align="center">🧩</td>
-<td><b>Framework agnostic</b>: every component ships for React, Solid, Preact, Vue, Svelte, and vanilla</td>
+<td><b>Framework agnostic</b>: every component ships for React, Solid, Preact, Vue, Svelte, and vanilla, in both WebGL and WebGPU builds</td>
+</tr>
+<tr>
+<td align="center">🖥️</td>
+<td><b>Two renderers</b>: WebGL with GLSL, or WebGPU through vgpu with WGSL</td>
 </tr>
 <tr>
 <td align="center">📋</td>
@@ -93,9 +98,19 @@ Most components wrap your content. The subtree stays live and interactive; the e
 
 See the [installation guide](https://canvasui.dev/docs/installation) for manual setup.
 
+## WebGL and WebGPU
+
+Every effect ships in two renderer builds. The WebGL build is the default: raw WebGL2 and GLSL, zero dependencies except `three` for the object effects. The WebGPU build renders through [vgpu](https://vgpu.sh) with WGSL shaders, keeps the same props and public API, and installs with the `-webgpu` registry suffix:
+
+```bash
+npx shadcn@latest add @canvas-ui/liquid-react-webgpu
+```
+
+WebGPU builds ship for all six frameworks. They need a browser with WebGPU, Chrome/Edge 113+, Safari 26+ / iOS 26, or Firefox 141+. If WebGPU is missing, the wrapped content renders unchanged. Details in the [rendering guide](https://canvasui.dev/docs/rendering).
+
 ## Components
 
-Every component ships for all six targets. Compare them in the [playground](https://canvasui.dev/playground).
+Every component ships for all six frameworks in both renderer builds. Compare them in the [playground](https://canvasui.dev/playground).
 
 <details open>
 <summary><b>🌊 Fluid &amp; motion</b></summary>
@@ -169,9 +184,15 @@ Point these at a GLB/glTF model, SVG, or image to render it as a 3D scene.
 | Browser                                                                        | HTML-in-canvas components | 3D effect components |
 | ------------------------------------------------------------------------------ | :-----------------------: | :------------------: |
 | Chrome with the [flag or origin trial](https://canvasui.dev/docs/installation) |      ✅ Full effect       |    ✅ Full effect    |
-| Everything else                                                                | ⚠️ WebGL overlay fallback |    ✅ Full effect    |
+| Everything else                                                                |  ⚠️ GPU overlay fallback  |    ✅ Full effect    |
 
 Html-in-canvas needs Chrome with the `chrome://flags/#canvas-draw-element` flag. An [origin trial](https://canvasui.dev/docs/installation) token lifts that for your visitors. That is how canvasui.dev runs in a plain Chrome install. Details in the [docs](https://canvasui.dev/docs).
+
+Chrome 150's changes to `texElementImage2D()` and `copyElementImageToTexture()` do not require a migration in Canvas UI. The HTML effects capture content with the 2D `drawElementImage()` API, then upload the canvas with standard `texImage2D()` (WebGL) or `copyExternalImageToTexture()` (WebGPU). Those upload methods keep their existing signatures. This also applies to the generated registry components for all six frameworks.
+
+The [later HTML-in-Canvas changes](https://developer.chrome.com/blog/html-in-canvas-ot-changes) also affect capture markup and hit testing. Canvas UI synchronizes the captured element's geometry when the browser requires it, keeping scrolling, clicks, and cursor effects working in Chrome 154. It also selects `content="drawable"` and `drawable` when the newer API is available, while preserving support for `layoutsubtree` and automatic 2D geometry synchronization.
+
+Both renderers follow pinch zoom through `visualViewport`, increasing capture and rendering resolution while preserving the HTML's position and interactions. The normal 2× device-pixel-ratio budget is multiplied by the zoom scale, subject to GPU limits, an 8192-pixel maximum dimension, and a 16-megapixel buffer budget. Particle Scroll uses plain HTML without a GPU overlay when HTML-in-Canvas is unavailable, including in Safari.
 
 ## Use with AI
 
@@ -196,12 +217,12 @@ npm run deploy     # build and deploy to Cloudflare
 
 | Path                         | What lives here                                         |
 | ---------------------------- | ------------------------------------------------------- |
-| `src/lib/<Component>/`       | The engine (`*Vanilla.ts`) plus five framework wrappers |
+| `src/lib/<Component>/`       | WebGL and WebGPU engines plus framework wrappers        |
 | `src/demos/`                 | Interactive demo and controls for each component        |
 | `src/app/`                   | Documentation site routes                               |
 | `scripts/build-registry.mts` | Generates `public/r/*.json` for the shadcn CLI          |
 
-Each component is one engine in plain TypeScript and WebGL, with thin framework wrappers. Nothing depends on anything else, and the engine defines its own props.
+Each component is plain TypeScript with thin framework wrappers. WebGL builds use raw WebGL2 and GLSL. WebGPU builds use vgpu and WGSL. Nothing depends on another Canvas UI component, and each engine defines its own props.
 
 ## Contributing
 
@@ -213,7 +234,7 @@ Issues and pull requests welcome. See [CONTRIBUTING.md](.github/CONTRIBUTING.md)
 
 <div align="center">
 <br />
-<sub>Built by <a href="https://github.com/DavidHDev">David Haz</a> · <a href="https://x.com/davidhdev">@davidhdev</a></sub>
+<sub>Built by <a href="https://github.com/DavidHDev">David Haz</a> · <a href="https://x.com/davidhaz">@davidhaz</a></sub>
 <br /><br />
 <a href="https://canvasui.dev"><b>canvasui.dev</b></a>
 

@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Glitch } from "@/lib/Glitch/Glitch";
+import { Glitch } from "@/components/docs/live/Glitch";
 
 const CONTROLS = {
   intensity: scrub("Intensity", 1, { min: 0, max: 2, step: 0.05 }),

@@ -5,7 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { color, radio, scrub } from "@/components/demos/control-schema";
 import { DemoControls } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Cloth } from "@/lib/Cloth/Cloth";
+import { Cloth } from "@/components/docs/live/Cloth";
 import type { ClothPin } from "@/lib/Cloth/ClothVanilla";
 
 const DEFAULT_PIN: ClothPin = "top";

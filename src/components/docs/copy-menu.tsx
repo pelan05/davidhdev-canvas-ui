@@ -28,6 +28,7 @@ import {
   FRAMEWORK_IDS,
   MANAGER_IDS,
 } from "@/components/docs/install-tabs";
+import { resolveFramework, useRenderer } from "@/components/docs/renderer";
 import { usePreference } from "@/hooks/use-preference";
 import { cn } from "@/lib/utils";
 
@@ -38,9 +39,14 @@ interface CopyMenuProps {
   description: string;
   installItem: string;
   variants: CodeVariant[];
+  /** WebGPU (vgpu) sources; empty when the component has no WebGPU build. */
+  webgpuVariants?: CodeVariant[];
   apiReference?: ApiProp[];
   dependencies?: string[];
   devDependencies?: string[];
+  /** Dependencies of the WebGPU build (includes vgpu). */
+  webgpuDependencies?: string[];
+  webgpuDevDependencies?: string[];
   demoSource?: string | null;
 }
 
@@ -121,15 +127,25 @@ export function CopyMenu({
   title,
   description,
   installItem,
-  variants,
+  variants: webglVariants,
+  webgpuVariants = [],
   apiReference,
-  dependencies = [],
-  devDependencies = [],
+  dependencies: webglDependencies = [],
+  devDependencies: webglDevDependencies = [],
+  webgpuDependencies = [],
+  webgpuDevDependencies = [],
   demoSource,
 }: CopyMenuProps) {
   const shouldReduceMotion = useReducedMotion();
   const [managerId] = usePreference("pm", "npm", MANAGER_IDS);
-  const [frameworkId] = usePreference("framework", "react", FRAMEWORK_IDS);
+  const [storedFramework] = usePreference("framework", "react", FRAMEWORK_IDS);
+  const [renderer] = useRenderer(webgpuVariants.length > 0);
+  const frameworkId = resolveFramework(storedFramework, renderer);
+  const webgpu = renderer === "webgpu";
+  const variants = webgpu ? webgpuVariants : webglVariants;
+  const dependencies = webgpu ? webgpuDependencies : webglDependencies;
+  const devDependencies = webgpu ? webgpuDevDependencies : webglDevDependencies;
+  const rendererLabel = webgpu ? "WebGPU via vgpu" : "WebGL";
   const [open, setOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -194,14 +210,20 @@ export function CopyMenu({
 
   const buildPrompt = () =>
     [
-      `# Canvas UI: ${title} (${variant.label})`,
+      `# Canvas UI: ${title} (${variant.label}, ${rendererLabel})`,
       "",
       description,
       "",
+      ...(webgpu
+        ? [
+            "This is the WebGPU build: identical props and behavior, rendered through the vgpu library with WGSL shaders. It needs a browser with WebGPU; without it the component renders the wrapped content unchanged.",
+            "",
+          ]
+        : []),
       "## Install",
       "",
       "```sh",
-      buildInstallCommand(managerId, installItem, frameworkId),
+      buildInstallCommand(managerId, installItem, frameworkId, renderer),
       "```",
       "",
       `Or copy the standalone source below into your project as ${variant.fileName}.`,
@@ -236,10 +258,12 @@ export function CopyMenu({
       "",
       docsUrl,
       "",
+      `Renderer: ${rendererLabel}.`,
+      "",
       "## Install",
       "",
       "```sh",
-      buildInstallCommand(managerId, installItem, frameworkId),
+      buildInstallCommand(managerId, installItem, frameworkId, renderer),
       "```",
       "",
       ...(depLines.length > 0

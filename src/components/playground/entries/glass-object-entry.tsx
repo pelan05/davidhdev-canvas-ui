@@ -12,7 +12,7 @@ import {
 } from "@/components/playground/entries/shared";
 import { MOCK_IMAGES, MockSite } from "@/components/playground/mock-site";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { GlassObject } from "@/lib/GlassObject/GlassObject";
+import { GlassObject } from "@/components/docs/live/GlassObject";
 
 const CONTROLS = {
   autoRotate: toggle("Auto rotate", false),

@@ -37,11 +37,13 @@ function SelectContent({
   className,
   children,
   align = "start",
+  container,
   ...props
 }: SelectPrimitive.Popup.Props &
-  Pick<SelectPrimitive.Positioner.Props, "align">) {
+  Pick<SelectPrimitive.Positioner.Props, "align"> &
+  Pick<SelectPrimitive.Portal.Props, "container">) {
   return (
-    <SelectPrimitive.Portal>
+    <SelectPrimitive.Portal container={container}>
       <SelectPrimitive.Positioner
         className="z-40 outline-none"
         sideOffset={8}

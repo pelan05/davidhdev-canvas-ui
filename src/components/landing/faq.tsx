@@ -16,17 +16,17 @@ const ITEMS = [
   {
     question: "Which browsers are supported?",
     answer:
-      "Components that draw live HTML on canvas rely on an experimental browser capability, available today in Chrome behind a flag. Everywhere else they degrade gracefully: your content renders as regular HTML, and effects like Blaze, Liquid, Laser, Clouds, Bubble, Droplets, Glass, Magnify, Grid, and Ripple keep running as a pure WebGL overlay on top of it. WebGL-based components work in every modern browser.",
+      "Components that draw live HTML on canvas rely on an experimental browser capability, available today in Chrome behind a flag. Everywhere else they degrade gracefully: your content renders as regular HTML, and effects like Blaze, Liquid, Laser, Clouds, Bubble, Droplets, Glass, Magnify, Grid, and Ripple keep running as a pure GPU overlay on top of it. The WebGL builds work in every modern browser; the WebGPU builds need a browser with WebGPU (Chrome, Edge, Safari 26, Firefox 141) and show your content unchanged elsewhere.",
   },
   {
     question: "Will it slow my site down?",
     answer:
-      "The effects render on the GPU via WebGL and animate outside React's render cycle. Each component initializes only when mounted, pauses when off-screen, and cleans up fully on unmount. Reduced-motion preferences are respected.",
+      "The effects render on the GPU, through WebGL or WebGPU via vgpu, and animate outside React's render cycle. Each component initializes only when mounted, pauses when off-screen, and cleans up fully on unmount. Reduced-motion preferences are respected.",
   },
   {
     question: "Do I need React?",
     answer:
-      "No. Every component ships in six flavors: React, Solid, Preact, Vue, Svelte, and dependency-free vanilla TypeScript. Same engine and the same options in all of them.",
+      "No. Every component ships in six flavors: React, Solid, Preact, Vue, Svelte, and dependency-free vanilla TypeScript. Same engine and the same options in all of them. Both the WebGL and the WebGPU build ship in all six.",
   },
   {
     question: "How do updates work?",

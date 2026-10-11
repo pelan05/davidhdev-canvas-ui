@@ -14,7 +14,7 @@ import {
 } from "@/components/playground/entries/shared";
 import { MockSite } from "@/components/playground/mock-site";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { AsciiObject } from "@/lib/AsciiObject/AsciiObject";
+import { AsciiObject } from "@/components/docs/live/AsciiObject";
 
 const MODEL_URL = "/assets/models/bolt.glb";
 const DEFAULT_HIGHLIGHT = "#066aff";

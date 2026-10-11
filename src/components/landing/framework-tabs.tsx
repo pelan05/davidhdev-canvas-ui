@@ -19,13 +19,15 @@ export function FrameworkTabs({ variants }: { variants: FrameworkVariant[] }) {
   const active = variants.find((v) => v.id === activeId) ?? variants[0];
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border/60">
-      <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-muted/40 px-2">
+    <div className="rounded-xl border border-border/60 bg-muted/30 px-2 pb-2">
+      <div className="flex items-center justify-between gap-2 py-2">
         <ChoiceSelect
           label="Framework"
           options={variants}
           value={active.id}
           onValueChange={setActiveId}
+          align="start"
+          className="my-0"
         />
         <div className="flex items-center gap-2 pr-1.5">
           <span className="hidden text-[12px] text-muted-foreground sm:block">
@@ -36,7 +38,7 @@ export function FrameworkTabs({ variants }: { variants: FrameworkVariant[] }) {
       </div>
       <div
         key={active.id}
-        className="docs-code framework-snippet-enter min-h-56 overflow-x-auto text-[13px] leading-6"
+        className="docs-code framework-snippet-enter min-h-56 overflow-x-auto rounded-lg border border-dashed border-border/70 bg-background text-[13px] leading-6"
         dangerouslySetInnerHTML={{ __html: active.html }}
       />
     </div>

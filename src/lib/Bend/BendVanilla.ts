@@ -1,3 +1,7 @@
+import { getCanvasPixelRatio, createCanvasResizeObserver } from "../canvas-viewport";
+import { prepareHtmlInCanvas, drawHtmlInCanvas } from "../html-in-canvas";
+import { createRectCache } from "../rect-cache";
+
 export interface BendOptions {
   /** Height of the folded region at each edge in CSS pixels. */
   zone?: number;
@@ -21,6 +25,8 @@ export interface BendOptions {
   tumble?: number;
   /** Pointer tilt strength (0 to 1). The face leans subtly toward the cursor. 0 disables. */
   tilt?: number;
+  /** CSS rotation applied to the Bend host, used to keep pointer mapping aligned. */
+  interactionRotation?: 0 | 90 | -90;
 }
 
 export interface BendElements {
@@ -53,6 +59,7 @@ const DEFAULTS: Required<BendOptions> = {
   bottom: true,
   tumble: 0.5,
   tilt: 0.5,
+  interactionRotation: 0,
 };
 
 type PaintableCanvas = HTMLCanvasElement & {
@@ -226,6 +233,7 @@ export function supportsHtmlInCanvas(): boolean {
 
 const HOVER_ATTR = "data-canvasui-hover";
 const CONTENT_ATTR = "data-canvasui-content";
+const CURSOR_ATTR = "data-canvasui-cursor";
 const HOVER_REWRITE = `:is([${HOVER_ATTR}], :hover:where(:not([${CONTENT_ATTR}], [${CONTENT_ATTR}] *)))`;
 
 function patchHoverRules() {
@@ -257,7 +265,7 @@ function patchHoverRules() {
     } catch {}
   }
   const style = document.createElement("style");
-  style.textContent = `[${CONTENT_ATTR}], [${CONTENT_ATTR}] * { cursor: var(--canvasui-cursor, auto) !important; }`;
+  style.textContent = `[${CONTENT_ATTR}][${CURSOR_ATTR}], [${CONTENT_ATTR}][${CURSOR_ATTR}] * { cursor: var(--canvasui-cursor) !important; }`;
   document.head.appendChild(style);
 }
 
@@ -285,6 +293,8 @@ export function createBend(
     typeof paintable.requestPaint === "function",
   );
 
+  if (htmlInCanvas) prepareHtmlInCanvas(source, content);
+
   let contentDirty = false;
   let wake = () => {};
 
@@ -292,7 +302,7 @@ export function createBend(
     paintable.onpaint = () => {
       try {
         sourceCtx!.reset();
-        sourceCtx!.drawElementImage!(content, 0, 0);
+        drawHtmlInCanvas(source, sourceCtx!, content);
         contentDirty = true;
         wake();
       } catch {}
@@ -384,7 +394,7 @@ export function createBend(
   }
 
   function syncCanvasSize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = getCanvasPixelRatio(output, gl!);
     const width = Math.max(1, Math.round(output.clientWidth * dpr));
     const height = Math.max(1, Math.round(output.clientHeight * dpr));
     if (output.width !== width || output.height !== height) {
@@ -396,11 +406,11 @@ export function createBend(
       Math.max(0.05, content.clientWidth / Math.max(output.clientWidth, 1)),
     );
     if (htmlInCanvas) {
-      const cssWidth = Math.max(1, Math.round(source.clientWidth));
-      const cssHeight = Math.max(1, Math.round(source.clientHeight));
-      if (source.width !== cssWidth * dpr || source.height !== cssHeight * dpr) {
-        source.width = cssWidth * dpr;
-        source.height = cssHeight * dpr;
+      const sourceWidth = Math.max(1, Math.round(source.clientWidth * dpr));
+      const sourceHeight = Math.max(1, Math.round(source.clientHeight * dpr));
+      if (source.width !== sourceWidth || source.height !== sourceHeight) {
+        source.width = sourceWidth;
+        source.height = sourceHeight;
       }
       paintable.requestPaint!();
     }
@@ -581,6 +591,8 @@ export function createBend(
   }
   content.addEventListener("wheel", onWheel, { passive: true });
 
+  const rectCache = createRectCache(output);
+
   function onPointerMove(event: PointerEvent) {
     if (!event.isPrimary) return;
     hoverClientX = event.clientX;
@@ -588,7 +600,7 @@ export function createBend(
     hoverOn = true;
     updateHover(event.clientX, event.clientY);
     if (config.tilt > 0 && !reducedMotion) {
-      const rect = output.getBoundingClientRect();
+      const rect = rectCache.current;
       if (rect.width > 0 && rect.height > 0) {
         const nx = (event.clientX - rect.left) / rect.width - 0.5;
         const ny = 0.5 - (event.clientY - rect.top) / rect.height;
@@ -745,51 +757,99 @@ export function createBend(
     }
     for (const el of next) el.setAttribute(HOVER_ATTR, "");
     hoverChain = Array.from(next);
+    content.removeAttribute(CURSOR_ATTR);
+    content.style.removeProperty("--canvasui-cursor");
     if (target) {
       content.style.setProperty(
         "--canvasui-cursor",
         getComputedStyle(target).cursor,
       );
-    } else {
-      content.style.removeProperty("--canvasui-cursor");
+      content.setAttribute(CURSOR_ATTR, "");
     }
+  }
+
+  function clientToLocal(clientX: number, clientY: number) {
+    const rect = output.getBoundingClientRect();
+    const width = Math.max(output.clientWidth, 1);
+    const height = Math.max(output.clientHeight, 1);
+    const dx = clientX - rect.left;
+    const dy = clientY - rect.top;
+
+    if (config.interactionRotation === -90) {
+      return {
+        rect,
+        x: width - dy / (rect.height / width),
+        y: dx / (rect.width / height),
+      };
+    }
+    if (config.interactionRotation === 90) {
+      return {
+        rect,
+        x: dy / (rect.height / width),
+        y: height - dx / (rect.width / height),
+      };
+    }
+    return {
+      rect,
+      x: dx / (rect.width / width),
+      y: dy / (rect.height / height),
+    };
+  }
+
+  function localToClient(x: number, y: number, rect: DOMRect) {
+    const width = Math.max(output.clientWidth, 1);
+    const height = Math.max(output.clientHeight, 1);
+
+    if (config.interactionRotation === -90) {
+      return {
+        x: rect.left + y * (rect.width / height),
+        y: rect.top + (width - x) * (rect.height / width),
+      };
+    }
+    if (config.interactionRotation === 90) {
+      return {
+        x: rect.left + (height - y) * (rect.width / height),
+        y: rect.top + x * (rect.height / width),
+      };
+    }
+    return {
+      x: rect.left + x * (rect.width / width),
+      y: rect.top + y * (rect.height / height),
+    };
   }
 
   function updateHover(clientX: number, clientY: number) {
     if (!htmlInCanvas) return;
-    const rect = output.getBoundingClientRect();
+    const local = clientToLocal(clientX, clientY);
+    const { rect } = local;
     if (rect.width === 0 || rect.height === 0) return;
-    const mapped = mapPoint(clientX - rect.left, clientY - rect.top);
+    const mapped = mapPoint(local.x, local.y);
     if (mapped.alpha < 0.5) {
       setHoverTarget(null);
       return;
     }
-    const target = document.elementFromPoint(
-      rect.left + mapped.x,
-      rect.top + mapped.y,
-    );
+    const point = localToClient(mapped.x, mapped.y, rect);
+    const target = document.elementFromPoint(point.x, point.y);
     setHoverTarget(target && content.contains(target) ? target : null);
   }
 
   function onClick(event: MouseEvent) {
     if (forwarding || !htmlInCanvas || event.button !== 0) return;
-    const rect = output.getBoundingClientRect();
+    const local = clientToLocal(event.clientX, event.clientY);
+    const { rect } = local;
     if (rect.width === 0 || rect.height === 0) return;
-    const localX = event.clientX - rect.left;
-    const localY = event.clientY - rect.top;
-    const mapped = mapPoint(localX, localY);
+    const mapped = mapPoint(local.x, local.y);
     if (mapped.alpha < 0.5) {
       event.preventDefault();
       event.stopPropagation();
       return;
     }
-    if (Math.hypot(mapped.x - localX, mapped.y - localY) < 1.5) return;
+    const point = localToClient(mapped.x, mapped.y, rect);
+    if (Math.hypot(point.x - event.clientX, point.y - event.clientY) < 1.5)
+      return;
     event.preventDefault();
     event.stopPropagation();
-    const target = document.elementFromPoint(
-      rect.left + mapped.x,
-      rect.top + mapped.y,
-    );
+    const target = document.elementFromPoint(point.x, point.y);
     if (!target) return;
     forwarding = true;
     try {
@@ -800,8 +860,8 @@ export function createBend(
           composed: true,
           view: window,
           detail: event.detail,
-          clientX: rect.left + mapped.x,
-          clientY: rect.top + mapped.y,
+          clientX: point.x,
+          clientY: point.y,
           screenX: event.screenX,
           screenY: event.screenY,
           ctrlKey: event.ctrlKey,
@@ -843,15 +903,14 @@ export function createBend(
   }
 
   function remapped(event: MouseEvent): { x: number; y: number } | null {
-    const rect = output.getBoundingClientRect();
+    const local = clientToLocal(event.clientX, event.clientY);
+    const { rect } = local;
     if (rect.width === 0 || rect.height === 0) return null;
-    const mapped = mapPoint(
-      event.clientX - rect.left,
-      event.clientY - rect.top,
-    );
+    const mapped = mapPoint(local.x, local.y);
     if (mapped.alpha < 0.5) return null;
-    const tx = rect.left + mapped.x;
-    const ty = rect.top + mapped.y;
+    const point = localToClient(mapped.x, mapped.y, rect);
+    const tx = point.x;
+    const ty = point.y;
     if (Math.hypot(tx - event.clientX, ty - event.clientY) < 1.5) return null;
     return { x: tx, y: ty };
   }
@@ -900,7 +959,7 @@ export function createBend(
   }
   motionQuery.addEventListener("change", onMotionChange);
 
-  const observer = new ResizeObserver(() => {
+  const observer = createCanvasResizeObserver(() => {
     syncCanvasSize();
     syncScroll();
     start();
@@ -933,9 +992,11 @@ export function createBend(
     },
     destroy() {
       destroyed = true;
+      rectCache.destroy();
       cancelAnimationFrame(raf);
       setHoverTarget(null);
       content.removeAttribute(CONTENT_ATTR);
+      content.removeAttribute(CURSOR_ATTR);
       content.removeEventListener("scroll", onScroll);
       content.removeEventListener("wheel", onWheel);
       content.removeEventListener("pointermove", onPointerMove);

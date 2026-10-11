@@ -2,6 +2,7 @@
 
 import { ChoiceSelect } from "@/components/docs/choice-select";
 import { CopyButton } from "@/components/docs/copy-button";
+import { useRenderer } from "@/components/docs/renderer";
 import { usePreference } from "@/hooks/use-preference";
 
 const MANAGERS = [
@@ -14,14 +15,26 @@ const MANAGERS = [
 const MANAGER_IDS = MANAGERS.map((manager) => manager.id);
 
 export function DependencyTabs({
-  dependencies,
-  devDependencies,
+  dependencies: webglDependencies,
+  devDependencies: webglDevDependencies,
+  webgpuDependencies,
+  webgpuDevDependencies,
 }: {
   dependencies: string[];
   devDependencies: string[];
+  /** Dependencies of the WebGPU build; omit when the component has none. */
+  webgpuDependencies?: string[];
+  webgpuDevDependencies?: string[];
 }) {
   const [managerId, setManagerId] = usePreference("pm", "npm", MANAGER_IDS);
   const manager = MANAGERS.find((m) => m.id === managerId) ?? MANAGERS[0];
+  const [renderer] = useRenderer(webgpuDependencies !== undefined);
+  const dependencies =
+    renderer === "webgpu" ? (webgpuDependencies ?? []) : webglDependencies;
+  const devDependencies =
+    renderer === "webgpu"
+      ? (webgpuDevDependencies ?? [])
+      : webglDevDependencies;
 
   const commands: string[] = [];
   if (dependencies.length > 0) {
@@ -29,6 +42,9 @@ export function DependencyTabs({
   }
   if (devDependencies.length > 0) {
     commands.push(`${manager.dev} ${devDependencies.join(" ")}`);
+  }
+  if (commands.length === 0) {
+    commands.push("# No dependencies for the WebGL build.");
   }
 
   return (

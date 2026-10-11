@@ -8,7 +8,7 @@ import { DemoControls, RadioRow } from "@/components/demos/demo-controls";
 import { EntryPage } from "@/components/playground/entries/shared";
 import { MockDashboard, MockSite } from "@/components/playground/mock-site";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Peel } from "@/lib/Peel/Peel";
+import { Peel } from "@/components/docs/live/Peel";
 import type { PeelMode, PeelSide } from "@/lib/Peel/PeelVanilla";
 
 const DEFAULT_SIDE: PeelSide = "left";

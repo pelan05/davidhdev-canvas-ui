@@ -30,12 +30,14 @@ const HOVER_QUERY = "(hover: hover) and (pointer: fine)";
 
 const NEW_HREFS = new Set([
   "/docs/components/ascii-object",
+  "/docs/components/ascii-sweep",
   "/docs/components/canvas",
   "/docs/components/decrypt-reveal",
   "/docs/components/displacement",
   "/docs/components/flame-wrap",
   "/docs/components/force-field",
   "/docs/components/glyph-rain",
+  "/docs/components/ink-object",
   "/docs/components/liquid-object",
 ]);
 
@@ -51,6 +53,7 @@ const sections = [
     items: [
       { href: "/docs", label: "Introduction" },
       { href: "/docs/installation", label: "Installation" },
+      { href: "/docs/rendering", label: "Rendering" },
       { href: "/docs/mcp", label: "MCP" },
     ],
   },
@@ -59,6 +62,7 @@ const sections = [
     items: [
       { href: "/components", label: "Browse All" },
       { href: "/docs/components/ascii-object", label: "ASCII Object" },
+      { href: "/docs/components/ascii-sweep", label: "ASCII Sweep" },
       { href: "/docs/components/asciify", label: "Asciify" },
       { href: "/docs/components/bend", label: "Bend" },
       { href: "/docs/components/blaze", label: "Blaze" },
@@ -79,6 +83,7 @@ const sections = [
       { href: "/docs/components/glyph-rain", label: "Glyph Rain" },
       { href: "/docs/components/grid", label: "Grid" },
       { href: "/docs/components/hex-float", label: "Hex Float" },
+      { href: "/docs/components/ink-object", label: "Ink Object" },
       { href: "/docs/components/laser", label: "Laser" },
       { href: "/docs/components/liquid", label: "Liquid" },
       { href: "/docs/components/magnify", label: "Magnify" },

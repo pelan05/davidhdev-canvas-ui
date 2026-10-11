@@ -18,7 +18,7 @@ function useSyncExternalStore<T>(
   useEffect(() => {
     const unsubscribe = subscribe(() => setValue(getSnapshot()));
     return unsubscribe;
-  }, []);
+  }, [subscribe, getSnapshot]);
   return value;
 }
 
@@ -115,6 +115,7 @@ export function ParticleScroll({
         ref={outputRef}
         aria-hidden
         style={{
+          display: native ? "block" : "none",
           position: "absolute",
           inset: 0,
           width: "100%",

@@ -45,6 +45,17 @@ export const PLAYGROUND_DEMOS: PlaygroundDemo[] = [
     ),
   },
   {
+    slug: "ascii-sweep",
+    name: "ASCII Sweep",
+    description: "An ascii band that rewrites the whole page as it sweeps.",
+    kind: "custom",
+    Component: load(() =>
+      import("@/components/playground/entries/ascii-sweep-entry").then(
+        (m) => m.AsciiSweepEntry,
+      ),
+    ),
+  },
+  {
     slug: "asciify",
     name: "Asciify",
     description: "An ascii lens that follows your cursor.",
@@ -227,6 +238,17 @@ export const PLAYGROUND_DEMOS: PlaygroundDemo[] = [
     kind: "wrap",
     Component: load(() =>
       import("@/demos/hex-float-demo").then((m) => m.HexFloatDemo),
+    ),
+  },
+  {
+    slug: "ink-object",
+    name: "Ink Object",
+    description: "A 3D model or image printed as rough ink strokes.",
+    kind: "custom",
+    Component: load(() =>
+      import("@/components/playground/entries/ink-object-entry").then(
+        (m) => m.InkObjectEntry,
+      ),
     ),
   },
   {

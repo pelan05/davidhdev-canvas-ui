@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { ForceField } from "@/lib/ForceField/ForceField";
+import { ForceField } from "@/components/docs/live/ForceField";
 
 const CONTROLS = {
   shape: radio("Shape", "hexagon", [

@@ -14,7 +14,7 @@ import {
 } from "@/components/playground/entries/shared";
 import { MockSite } from "@/components/playground/mock-site";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { ParticleObject } from "@/lib/ParticleObject/ParticleObject";
+import { ParticleObject } from "@/components/docs/live/ParticleObject";
 
 const MODEL_URL = "/assets/models/bolt.glb";
 

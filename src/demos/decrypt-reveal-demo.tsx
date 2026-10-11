@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { DecryptReveal } from "@/lib/DecryptReveal/DecryptReveal";
+import { DecryptReveal } from "@/components/docs/live/DecryptReveal";
 
 const CONTROLS = {
   radius: scrub("Radius", 400, { min: 60, max: 600, step: 10, decimals: 0 }),

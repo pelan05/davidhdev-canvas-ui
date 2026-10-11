@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Canvas } from "@/lib/Canvas/Canvas";
+import { Canvas } from "@/components/docs/live/Canvas";
 
 const CONTROLS = {
   threadSize: scrub("Thread size", 2, {

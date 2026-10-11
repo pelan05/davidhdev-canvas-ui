@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { GlyphRain } from "@/lib/GlyphRain/GlyphRain";
+import { GlyphRain } from "@/components/docs/live/GlyphRain";
 
 const CONTROLS = {
   cell: scrub("Glyph size", 15, { min: 8, max: 48, step: 1, decimals: 0 }),

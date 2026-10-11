@@ -10,7 +10,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Shatter } from "@/lib/Shatter/Shatter";
+import { Shatter } from "@/components/docs/live/Shatter";
 
 const LIGHT_GAP = "#ffffff";
 const DARK_GAP = "#0a0a0a";

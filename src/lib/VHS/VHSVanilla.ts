@@ -1,3 +1,5 @@
+import { getCanvasPixelRatio, createCanvasResizeObserver } from "../canvas-viewport";
+import { prepareHtmlInCanvas, drawHtmlInCanvas } from "../html-in-canvas";
 export interface VHSOptions {
   /** Playback speed of the tape artifacts. 1 is normal speed. */
   speed?: number;
@@ -270,6 +272,8 @@ export function createVHS(
     typeof paintable.requestPaint === "function",
   );
 
+  if (htmlInCanvas) prepareHtmlInCanvas(source, content);
+
   let contentDirty = false;
   let wake = () => {};
 
@@ -277,7 +281,7 @@ export function createVHS(
     paintable.onpaint = () => {
       try {
         sourceCtx!.reset();
-        sourceCtx!.drawElementImage!(content, 0, 0);
+        drawHtmlInCanvas(source, sourceCtx!, content);
         contentDirty = true;
         wake();
       } catch {}
@@ -364,7 +368,7 @@ export function createVHS(
   }
 
   function syncCanvasSize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = getCanvasPixelRatio(output, gl!);
     const width = Math.max(1, Math.round(output.clientWidth * dpr));
     const height = Math.max(1, Math.round(output.clientHeight * dpr));
     if (output.width !== width || output.height !== height) {
@@ -376,11 +380,11 @@ export function createVHS(
       Math.max(0.05, content.clientWidth / Math.max(output.clientWidth, 1)),
     );
     if (htmlInCanvas) {
-      const cssWidth = Math.max(1, Math.round(source.clientWidth));
-      const cssHeight = Math.max(1, Math.round(source.clientHeight));
-      if (source.width !== cssWidth * dpr || source.height !== cssHeight * dpr) {
-        source.width = cssWidth * dpr;
-        source.height = cssHeight * dpr;
+      const sourceWidth = Math.max(1, Math.round(source.clientWidth * dpr));
+      const sourceHeight = Math.max(1, Math.round(source.clientHeight * dpr));
+      if (source.width !== sourceWidth || source.height !== sourceHeight) {
+        source.width = sourceWidth;
+        source.height = sourceHeight;
       }
       paintable.requestPaint!();
     }
@@ -453,7 +457,10 @@ export function createVHS(
     gl!.uniform1f(uniforms.uGrain, Math.max(config.grain, 0));
     gl!.uniform1f(uniforms.uScanlines, Math.max(config.scanlines, 0));
     gl!.uniform1f(uniforms.uVignette, Math.max(config.vignette, 0));
-    gl!.uniform1f(uniforms.uBarrel, Math.max(config.barrel, 0));
+    gl!.uniform1f(
+      uniforms.uBarrel,
+      htmlInCanvas ? Math.max(config.barrel, 0) : 0,
+    );
     gl!.uniform3f(uniforms.uBezel, bezel[0], bezel[1], bezel[2]);
     gl!.uniform1f(uniforms.uCreaseNoise, noiseCpu(time, time));
     gl!.uniform1f(uniforms.uSaturation, config.saturation);
@@ -506,7 +513,7 @@ export function createVHS(
   }
   motionQuery.addEventListener("change", onMotionChange);
 
-  const observer = new ResizeObserver(() => {
+  const observer = createCanvasResizeObserver(() => {
     syncCanvasSize();
     start();
   });

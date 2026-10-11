@@ -60,6 +60,8 @@ Canvas UI is a trusted shadcn registry, so the @canvas-ui namespace works out of
 ${ADD_COMMAND}
 \`\`\`
 
+WebGPU registry items use the same name with -webgpu after the framework, for example @canvas-ui/liquid-react-webgpu.
+
 Optionally, you can pin the registry in your components.json file:
 
 \`\`\`json
@@ -209,6 +211,11 @@ export default async function McpPage() {
         <div className="my-6">
           <CodeBlock source={ADD_COMMAND} />
         </div>
+        <p>
+          WebGPU registry items use the same name with <code>-webgpu</code>{" "}
+          after the framework, for example{" "}
+          <code>@canvas-ui/liquid-react-webgpu</code>.
+        </p>
         <p>
           Optionally, you can pin the registry in your{" "}
           <code>components.json</code> file:

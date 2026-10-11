@@ -55,6 +55,12 @@ const ENTRIES: SearchEntry[] = [
     section: "Getting Started",
     suggested: true,
   },
+  {
+    href: "/docs/rendering",
+    label: "Rendering",
+    section: "Getting Started",
+    hint: "webgl webgpu vgpu wgsl renderer",
+  },
   { href: "/docs/mcp", label: "MCP", section: "Getting Started" },
   {
     href: "/components",
@@ -67,6 +73,12 @@ const ENTRIES: SearchEntry[] = [
     label: "ASCII Object",
     section: "Components",
     hint: "ascii 3d model glb gltf svg image studio three.js characters glyph shape terminal",
+  },
+  {
+    href: "/docs/components/ascii-sweep",
+    label: "ASCII Sweep",
+    section: "Components",
+    hint: "ascii sweep swap transition tabs text swap band glow terminal glyph scan",
   },
   {
     href: "/docs/components/asciify",
@@ -187,6 +199,12 @@ const ENTRIES: SearchEntry[] = [
     label: "Hex Float",
     section: "Components",
     hint: "hexagon tiles shiny perspective tilt cursor lift",
+  },
+  {
+    href: "/docs/components/ink-object",
+    label: "Ink Object",
+    section: "Components",
+    hint: "3d model gltf glb svg png ink hatching strokes dashes print linocut woodcut",
   },
   {
     href: "/docs/components/laser",

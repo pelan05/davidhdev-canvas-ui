@@ -3,7 +3,7 @@
 import { DemoControls } from "@/components/demos/demo-controls";
 import { EntryPage } from "@/components/playground/entries/shared";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { FlameWrap } from "@/lib/FlameWrap/FlameWrap";
+import { FlameWrap } from "@/components/docs/live/FlameWrap";
 import {
   FLAME_WRAP_CONTROLS,
   FlameProfileCard,

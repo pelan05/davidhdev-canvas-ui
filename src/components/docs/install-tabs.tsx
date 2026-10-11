@@ -2,6 +2,13 @@
 
 import { CopyButton } from "@/components/docs/copy-button";
 import { ChoiceSelect } from "@/components/docs/choice-select";
+import {
+  RENDERERS,
+  registrySuffix,
+  resolveFramework,
+  useRenderer,
+  type RendererId,
+} from "@/components/docs/renderer";
 import { usePreference } from "@/hooks/use-preference";
 
 const MANAGERS = [
@@ -27,21 +34,40 @@ export function buildInstallCommand(
   managerId: string,
   item: string,
   frameworkId: string,
+  renderer: RendererId = "webgl",
 ) {
   const manager = MANAGERS.find((m) => m.id === managerId) ?? MANAGERS[0];
-  return `${manager.run} shadcn@latest add @canvas-ui/${item}-${frameworkId}`;
+  return `${manager.run} shadcn@latest add @canvas-ui/${item}-${frameworkId}${registrySuffix(renderer)}`;
 }
 
-export function InstallTabs({ item }: { item: string }) {
+export function InstallTabs({
+  item,
+  hasWebGPU = false,
+}: {
+  item: string;
+  /** Whether this component ships a WebGPU (vgpu) build. */
+  hasWebGPU?: boolean;
+}) {
   const [managerId, setManagerId] = usePreference("pm", "npm", MANAGER_IDS);
-  const [frameworkId, setFrameworkId] = usePreference(
+  const [storedFramework, setFrameworkId] = usePreference(
     "framework",
     "react",
     FRAMEWORK_IDS,
   );
+  const [renderer, setRenderer] = useRenderer(hasWebGPU);
 
   const manager = MANAGERS.find((m) => m.id === managerId) ?? MANAGERS[0];
-  const fullCommand = buildInstallCommand(manager.id, item, frameworkId);
+  const frameworkId = resolveFramework(
+    storedFramework,
+    renderer,
+  ) as (typeof FRAMEWORKS)[number]["id"];
+  const frameworks = FRAMEWORKS;
+  const fullCommand = buildInstallCommand(
+    manager.id,
+    item,
+    frameworkId,
+    renderer,
+  );
 
   return (
     <div className="overflow-hidden rounded-xl border border-border/60">
@@ -53,13 +79,24 @@ export function InstallTabs({ item }: { item: string }) {
           value={manager.id}
           onValueChange={setManagerId}
         />
-        <ChoiceSelect
-          label="Framework"
-          options={FRAMEWORKS}
-          value={frameworkId}
-          onValueChange={setFrameworkId}
-          align="end"
-        />
+        <div className="flex min-w-0 items-center gap-1">
+          {hasWebGPU ? (
+            <ChoiceSelect
+              label="Renderer"
+              options={RENDERERS}
+              value={renderer}
+              onValueChange={setRenderer}
+              align="end"
+            />
+          ) : null}
+          <ChoiceSelect
+            label="Framework"
+            options={frameworks}
+            value={frameworkId}
+            onValueChange={setFrameworkId}
+            align="end"
+          />
+        </div>
       </div>
       <div className="flex items-center justify-between gap-3 py-1.5 pr-1.5 pl-4">
         <code className="overflow-x-auto text-[13px] whitespace-nowrap text-foreground/90">
@@ -68,5 +105,36 @@ export function InstallTabs({ item }: { item: string }) {
         <CopyButton text={fullCommand} />
       </div>
     </div>
+  );
+}
+
+/** Contextual note under the install command, driven by the renderer choice. */
+export function InstallNote({ hasWebGPU = false }: { hasWebGPU?: boolean }) {
+  const [renderer] = useRenderer(hasWebGPU);
+  if (renderer === "webgpu") {
+    return (
+      <p className="mt-2 text-[13px] text-muted-foreground">
+        WebGPU build: same component, same props, rendered through{" "}
+        <a
+          href="https://vgpu.sh"
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-4 hover:text-foreground"
+        >
+          vgpu
+        </a>{" "}
+        with WGSL shaders. Adds the <code>vgpu</code> dependency and needs a
+        browser with WebGPU. Without it the component shows your content
+        unchanged. Or copy the source below into your project.
+      </p>
+    );
+  }
+  return (
+    <p className="mt-2 text-[13px] text-muted-foreground">
+      Or copy the source below into your project.
+      {hasWebGPU
+        ? " Prefer WGSL? Switch the renderer above to the WebGPU build."
+        : ""}
+    </p>
   );
 }

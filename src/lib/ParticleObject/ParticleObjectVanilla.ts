@@ -1,7 +1,9 @@
+import { getCanvasPixelRatio, createCanvasResizeObserver } from "../canvas-viewport";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { createRectCache } from "../rect-cache";
 
 export interface ParticleObjectOptions {
   /** URL of the asset to display: GLB/glTF, SVG, PNG, JPEG, WebP, or GIF. Object URLs from a file input work too. The format is sniffed from the bytes, not the extension. */
@@ -751,7 +753,7 @@ export function createParticleObject(
   function resize() {
     const width = Math.max(canvas.clientWidth, 1);
     const height = Math.max(canvas.clientHeight, 1);
-    const pr = Math.min(window.devicePixelRatio || 1, 2);
+    const pr = getCanvasPixelRatio(canvas, renderer.getContext());
     renderer.setPixelRatio(pr);
     renderer.setSize(width, height, false);
     material.uniforms.uDpr.value = pr;
@@ -759,7 +761,7 @@ export function createParticleObject(
     camera.updateProjectionMatrix();
   }
 
-  const observer = new ResizeObserver(resize);
+  const observer = createCanvasResizeObserver(resize);
   observer.observe(canvas);
   resize();
   applyOptions();
@@ -775,8 +777,10 @@ export function createParticleObject(
   let shoveX = 0;
   let shoveY = 0;
 
+  const rectCache = createRectCache(canvas);
+
   function onPointerMove(event: PointerEvent) {
-    const rect = canvas.getBoundingClientRect();
+    const rect = rectCache.current;
     pointerX = event.clientX - rect.left;
     pointerY = event.clientY - rect.top;
     const now = performance.now();
@@ -1025,6 +1029,7 @@ export function createParticleObject(
     resize,
     destroy() {
       disposed = true;
+      rectCache.destroy();
       loadToken += 1;
       stopLoop();
       observer.disconnect();

@@ -7,13 +7,13 @@ import { Footer } from "@/components/landing/footer";
 export const metadata: Metadata = {
   title: "Introduction",
   description:
-    "Canvas UI is a free, open source component library of creative canvas and WebGL effects for React, Solid, Preact, Vue, Svelte, and vanilla JS.",
+    "Canvas UI is a free, open source component library of creative canvas effects for React, Solid, Preact, Vue, Svelte, and vanilla JS, with WebGL and WebGPU (via vgpu) builds of every effect.",
   alternates: { canonical: "/docs" },
 };
 
 const PAGE_MARKDOWN = `# Introduction
 
-Canvas UI is an open source library of creative components drawn on canvas. Real HTML, rendered inside a canvas element, with WebGL effects running over it. Copy, paste, and ship.
+Canvas UI is an open source library of creative components drawn on canvas. Real HTML, rendered inside a canvas element, with GPU effects running over it in WebGL or WebGPU. Copy, paste, and ship.
 
 ## What is this?
 
@@ -24,6 +24,10 @@ Most of the library is built on the html-in-canvas API, an experimental browser 
 ## Framework agnostic
 
 Every component ships in six flavors: React, Solid, Preact, Vue, Svelte, and vanilla TypeScript. Each one is a single standalone file, built on the same engine with the same options. Pick your framework once in the docs and every install command and code example follows.
+
+## Two renderer builds
+
+Every effect ships as WebGL and WebGPU builds with the same public API. Use WebGL for the widest support, or WebGPU for WGSL and a WebGPU-native pipeline. Read the rendering guide: https://canvasui.dev/docs/rendering
 
 ## You own the code
 
@@ -53,8 +57,8 @@ export default function DocsPage() {
         </div>
         <p className="max-w-xl text-muted-foreground">
           Canvas UI is an open source library of creative components drawn on
-          canvas. Real HTML, rendered inside a canvas element, with WebGL
-          effects running over it. Copy, paste, and ship.
+          canvas. Real HTML, rendered inside a canvas element, with GPU
+          effects running over it in WebGL or WebGPU. Copy, paste, and ship.
         </p>
 
         <h2>What is this?</h2>
@@ -78,6 +82,14 @@ export default function DocsPage() {
           Svelte, and vanilla TypeScript. Each one is a single standalone file,
           built on the same engine with the same options. Pick your framework
           once in the docs and every install command and code example follows.
+        </p>
+
+        <h2>Two renderer builds</h2>
+        <p>
+          Every effect ships as WebGL and WebGPU builds with the same public
+          API. Use WebGL for the widest support, or WebGPU for WGSL and a
+          WebGPU-native pipeline. Read the{" "}
+          <a href="/docs/rendering">rendering guide</a>.
         </p>
 
         <h2>You own the code</h2>

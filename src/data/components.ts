@@ -17,6 +17,7 @@ export const LIGHT_VIDEOS = new Set([
   "/assets/videos/glitch.webm",
   "/assets/videos/glyph-rain.webm",
   "/assets/videos/hex-float.webm",
+  "/assets/videos/ink-object.webm",
   "/assets/videos/liquid-object.webm",
   "/assets/videos/ripple.webm",
 ]);
@@ -30,6 +31,13 @@ export const COMPONENTS: ComponentEntry[] = [
     description:
       "Any GLB/glTF model, SVG, or image floating in a studio scene, redrawn as shape-matched ASCII characters.",
     video: "/assets/videos/ascii-object.webm",
+  },
+  {
+    href: "/docs/components/ascii-sweep",
+    name: "ASCII Sweep",
+    description:
+      "A band of glowing ascii characters sweeps across the text lines and swaps one set of content for another.",
+    video: "/assets/videos/ascii-sweep.webm",
   },
   {
     href: "/docs/components/asciify",
@@ -172,6 +180,13 @@ export const COMPONENTS: ComponentEntry[] = [
     video: "/assets/videos/hex-float.webm",
   },
   {
+    href: "/docs/components/ink-object",
+    name: "Ink Object",
+    description:
+      "Any GLB/glTF model, SVG, or image floating in a studio scene, printed as rough hand-pressed ink strokes.",
+    video: "/assets/videos/ink-object.webm",
+  },
+  {
     href: "/docs/components/laser",
     name: "Laser",
     description:
@@ -182,7 +197,7 @@ export const COMPONENTS: ComponentEntry[] = [
     href: "/docs/components/liquid",
     name: "Liquid",
     description:
-      "A pointer-driven WebGL fluid simulation that runs over your live HTML.",
+      "A pointer-driven GPU fluid simulation that runs over your live HTML.",
     video: "/assets/videos/liquid.webm",
   },
   {

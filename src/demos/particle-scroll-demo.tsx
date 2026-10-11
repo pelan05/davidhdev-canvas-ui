@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { ParticleScroll } from "@/lib/ParticleScroll/ParticleScroll";
+import { ParticleScroll } from "@/components/docs/live/ParticleScroll";
 
 const CONTROLS = {
   point: scrub("Point", 0.68, { min: 0.2, max: 1, step: 0.01 }),

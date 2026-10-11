@@ -1,7 +1,9 @@
 "use client";
 
 import { play } from "cuelume";
+import { useState } from "react";
 
+import { effectPortalContainer } from "@/components/common/effect-portal";
 import {
   Select,
   SelectContent,
@@ -36,6 +38,11 @@ export function ChoiceSelect<T extends string>({
   /** `"tabs"` shows a tablist on `sm`+ (for short lists); select otherwise. */
   variant?: "select" | "tabs";
 }) {
+  // The trigger remounts when an effect wrapper flips between its native and
+  // fallback DOM, so resolving from the current element stays accurate.
+  const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
+  const container = effectPortalContainer(trigger);
+
   const select = (next: T) => {
     onValueChange(next);
     play("bloom");
@@ -86,6 +93,7 @@ export function ChoiceSelect<T extends string>({
         }}
       >
         <SelectTrigger
+          ref={setTrigger}
           aria-label={label}
           className={cn(
             "my-1.5 min-w-0",
@@ -99,7 +107,7 @@ export function ChoiceSelect<T extends string>({
             }
           </SelectValue>
         </SelectTrigger>
-        <SelectContent align={align}>
+        <SelectContent align={align} container={container}>
           {options.map((option) => (
             <SelectItem key={option.id} value={option.id}>
               {option.label}

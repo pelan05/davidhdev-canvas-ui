@@ -1,3 +1,7 @@
+import { getCanvasPixelRatio, createCanvasResizeObserver } from "../canvas-viewport";
+import { prepareHtmlInCanvas, drawHtmlInCanvas } from "../html-in-canvas";
+import { createRectCache } from "../rect-cache";
+
 export interface DecryptRevealOptions {
   /** Decrypt radius around the cursor in CSS pixels. */
   radius?: number;
@@ -519,6 +523,8 @@ export function createDecryptReveal(
     typeof paintable.requestPaint === "function",
   );
 
+  if (htmlInCanvas) prepareHtmlInCanvas(source, content);
+
   let contentDirty = false;
   let cellsDirty = true;
   let wake = () => {};
@@ -527,7 +533,7 @@ export function createDecryptReveal(
     paintable.onpaint = () => {
       try {
         sourceCtx!.reset();
-        sourceCtx!.drawElementImage!(content, 0, 0);
+        drawHtmlInCanvas(source, sourceCtx!, content);
         contentDirty = true;
         wake();
       } catch {}
@@ -699,7 +705,7 @@ export function createDecryptReveal(
   }
 
   function syncCanvasSize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = getCanvasPixelRatio(output, gl!);
     const width = Math.max(1, Math.round(output.clientWidth * dpr));
     const height = Math.max(1, Math.round(output.clientHeight * dpr));
     if (output.width !== width || output.height !== height) {
@@ -711,14 +717,14 @@ export function createDecryptReveal(
       Math.max(0.05, content.clientWidth / Math.max(output.clientWidth, 1)),
     );
     if (htmlInCanvas) {
-      const cssWidth = Math.max(1, Math.round(source.clientWidth));
-      const cssHeight = Math.max(1, Math.round(source.clientHeight));
+      const sourceWidth = Math.max(1, Math.round(source.clientWidth * dpr));
+      const sourceHeight = Math.max(1, Math.round(source.clientHeight * dpr));
       if (
-        source.width !== cssWidth * dpr ||
-        source.height !== cssHeight * dpr
+        source.width !== sourceWidth ||
+        source.height !== sourceHeight
       ) {
-        source.width = cssWidth * dpr;
-        source.height = cssHeight * dpr;
+        source.width = sourceWidth;
+        source.height = sourceHeight;
       }
       paintable.requestPaint!();
     }
@@ -942,7 +948,7 @@ export function createDecryptReveal(
   }
   motionQuery.addEventListener("change", onMotionChange);
 
-  const observer = new ResizeObserver(() => {
+  const observer = createCanvasResizeObserver(() => {
     syncCanvasSize();
     start();
   });
@@ -957,8 +963,10 @@ export function createDecryptReveal(
 
   const listenTarget = output.parentElement ?? output;
 
+  const rectCache = createRectCache(output);
+
   function onPointerMove(event: PointerEvent) {
-    const rect = output.getBoundingClientRect();
+    const rect = rectCache.current;
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
     if (pointer.target === 0 && pointer.active < 1e-3) {
@@ -976,8 +984,8 @@ export function createDecryptReveal(
     start();
   }
 
-  listenTarget.addEventListener("pointermove", onPointerMove);
-  listenTarget.addEventListener("pointerleave", onPointerLeave);
+  listenTarget.addEventListener("pointermove", onPointerMove, { passive: true });
+  listenTarget.addEventListener("pointerleave", onPointerLeave, { passive: true });
 
   return {
     setOptions(next) {
@@ -1018,6 +1026,7 @@ export function createDecryptReveal(
     },
     destroy() {
       destroyed = true;
+      rectCache.destroy();
       cancelAnimationFrame(raf);
       observer.disconnect();
       intersection.disconnect();

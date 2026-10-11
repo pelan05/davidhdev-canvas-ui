@@ -11,7 +11,7 @@ import { FrostDemo } from "@/demos/frost-demo";
 export const metadata: Metadata = {
   title: "Frost",
   description:
-    "Covers your live page in a frozen pane of ice that melts under the cursor and refreezes over time. Refraction, frost grain and melt trails, all in a single WebGL pass with no dependencies.",
+    "Covers your live page in a frozen pane of ice that melts under the cursor and refreezes over time. Refraction, frost grain and melt trails, all in a single GPU pass, in WebGL or WebGPU via vgpu, with no dependencies.",
   alternates: { canonical: "/docs/components/frost" },
 };
 

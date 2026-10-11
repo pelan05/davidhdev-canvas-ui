@@ -13,10 +13,9 @@ import {
 } from "@/components/demos/control-schema";
 import { ColorRow, DemoControls } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { DitheredObject } from "@/lib/DitheredObject/DitheredObject";
+import { DitheredObject } from "@/components/docs/live/DitheredObject";
 
-const DEFAULT_MODEL =
-  "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb";
+const DEFAULT_MODEL = "/assets/models/duck.glb";
 const DEFAULT_HIGHLIGHT = "#066aff";
 const LIGHT_BACKGROUND = "#ffffff";
 const DARK_BACKGROUND = "#0a0a0a";

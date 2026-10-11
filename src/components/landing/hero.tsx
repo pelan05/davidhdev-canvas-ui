@@ -28,8 +28,8 @@ export function Hero() {
           style={{ "--enter-index": 1 } as React.CSSProperties}
           className="hero-enter mt-5 max-w-md text-base leading-7 text-pretty text-muted-foreground"
         >
-          An open source library of tasteful html-in-canvas & WebGL components.
-          Framework agnostic. Copy, paste, ship.
+          An open source library of tasteful html-in-canvas components, in
+          WebGL or WebGPU. Framework agnostic.
         </p>
 
         <div

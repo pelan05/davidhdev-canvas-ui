@@ -8,7 +8,7 @@ import { color, scrub } from "@/components/demos/control-schema";
 import { DemoControls } from "@/components/demos/demo-controls";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { FlameWrap } from "@/lib/FlameWrap/FlameWrap";
+import { FlameWrap } from "@/components/docs/live/FlameWrap";
 import { cn } from "@/lib/utils";
 
 export const FLAME_WRAP_CONTROLS = {

@@ -1,3 +1,5 @@
+import { getCanvasPixelRatio, createCanvasResizeObserver } from "../canvas-viewport";
+import { prepareHtmlInCanvas, drawHtmlInCanvas } from "../html-in-canvas";
 export interface GlyphRainOptions {
   /** Characters used for the falling glyphs. Deduplicated into a glyph atlas. */
   charset?: string;
@@ -367,6 +369,8 @@ export function createGlyphRain(
     typeof paintable.requestPaint === "function",
   );
 
+  if (htmlInCanvas) prepareHtmlInCanvas(source, content);
+
   let contentDirty = false;
   let pageLum = 0;
   let wake = () => {};
@@ -399,7 +403,7 @@ export function createGlyphRain(
     paintable.onpaint = () => {
       try {
         sourceCtx!.reset();
-        sourceCtx!.drawElementImage!(content, 0, 0);
+        drawHtmlInCanvas(source, sourceCtx!, content);
         contentDirty = true;
         wake();
       } catch {}
@@ -494,7 +498,7 @@ export function createGlyphRain(
   let dpr = 1;
 
   function syncCanvasSize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = getCanvasPixelRatio(output, gl!);
     const width = Math.max(1, Math.round(output.clientWidth * dpr));
     const height = Math.max(1, Math.round(output.clientHeight * dpr));
     if (output.width !== width || output.height !== height) {
@@ -502,14 +506,14 @@ export function createGlyphRain(
       output.height = height;
     }
     if (htmlInCanvas) {
-      const cssWidth = Math.max(1, Math.round(source.clientWidth));
-      const cssHeight = Math.max(1, Math.round(source.clientHeight));
+      const sourceWidth = Math.max(1, Math.round(source.clientWidth * dpr));
+      const sourceHeight = Math.max(1, Math.round(source.clientHeight * dpr));
       if (
-        source.width !== cssWidth * dpr ||
-        source.height !== cssHeight * dpr
+        source.width !== sourceWidth ||
+        source.height !== sourceHeight
       ) {
-        source.width = cssWidth * dpr;
-        source.height = cssHeight * dpr;
+        source.width = sourceWidth;
+        source.height = sourceHeight;
       }
       paintable.requestPaint!();
     }
@@ -764,12 +768,12 @@ export function createGlyphRain(
     start();
   }
 
-  pointerHost.addEventListener("pointermove", onPointerMove);
-  pointerHost.addEventListener("pointerleave", onPointerLeave);
-  pointerHost.addEventListener("pointercancel", onPointerLeave);
-  pointerHost.addEventListener("pointerdown", onPointerDown);
+  pointerHost.addEventListener("pointermove", onPointerMove, { passive: true });
+  pointerHost.addEventListener("pointerleave", onPointerLeave, { passive: true });
+  pointerHost.addEventListener("pointercancel", onPointerLeave, { passive: true });
+  pointerHost.addEventListener("pointerdown", onPointerDown, { passive: true });
 
-  const observer = new ResizeObserver(() => {
+  const observer = createCanvasResizeObserver(() => {
     syncCanvasSize();
     start();
   });

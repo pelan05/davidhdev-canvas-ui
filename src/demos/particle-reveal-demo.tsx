@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ParticleReveal } from "@/lib/ParticleReveal/ParticleReveal";
+import { ParticleReveal } from "@/components/docs/live/ParticleReveal";
 
 const CONTROLS = {
   radius: scrub("Radius", 500, { min: 60, max: 600, step: 10, decimals: 0 }),

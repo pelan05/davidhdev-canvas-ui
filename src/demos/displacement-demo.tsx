@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Displacement } from "@/lib/Displacement/Displacement";
+import { Displacement } from "@/components/docs/live/Displacement";
 
 const CONTROLS = {
   grid: scrub("Grid cells", 50, { min: 4, max: 60, step: 1, decimals: 0 }),

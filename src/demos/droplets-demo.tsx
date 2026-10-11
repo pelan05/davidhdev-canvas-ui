@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Droplets } from "@/lib/Droplets/Droplets";
+import { Droplets } from "@/components/docs/live/Droplets";
 
 const CONTROLS = {
   intensity: scrub("Intensity", 0.5, { min: 0, max: 1.25, step: 0.05 }),

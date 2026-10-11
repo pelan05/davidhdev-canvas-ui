@@ -9,7 +9,7 @@ import {
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
 import { MockSite } from "@/components/playground/mock-site";
-import { ParticleReveal } from "@/lib/ParticleReveal/ParticleReveal";
+import { ParticleReveal } from "@/components/docs/live/ParticleReveal";
 
 const CONTROLS = {
   radius: scrub("Radius", 500, { min: 60, max: 900, step: 10, decimals: 0 }),

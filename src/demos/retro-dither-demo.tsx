@@ -8,7 +8,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { RetroDither } from "@/lib/RetroDither/RetroDither";
+import { RetroDither } from "@/components/docs/live/RetroDither";
 
 const CONTROLS = {
   radius: scrub("Radius", 0.5, { min: 0.1, max: 0.8, step: 0.01 }),

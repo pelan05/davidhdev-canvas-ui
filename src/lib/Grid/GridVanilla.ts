@@ -1,3 +1,7 @@
+import { getCanvasPixelRatio, createCanvasResizeObserver } from "../canvas-viewport";
+import { prepareHtmlInCanvas, drawHtmlInCanvas } from "../html-in-canvas";
+import { createRectCache } from "../rect-cache";
+
 export interface GridOptions {
   /** Size of each grid tile in CSS pixels. */
   tileSize?: number;
@@ -339,6 +343,8 @@ export function createGrid(
     typeof paintable.requestPaint === "function",
   );
 
+  if (htmlInCanvas) prepareHtmlInCanvas(source, content);
+
   let contentDirty = false;
   let wake = () => {};
 
@@ -346,7 +352,7 @@ export function createGrid(
     paintable.onpaint = () => {
       try {
         sourceCtx!.reset();
-        sourceCtx!.drawElementImage!(content, 0, 0);
+        drawHtmlInCanvas(source, sourceCtx!, content);
         contentDirty = true;
         wake();
       } catch {}
@@ -430,7 +436,7 @@ export function createGrid(
   );
 
   function dpr() {
-    return Math.min(window.devicePixelRatio || 1, 2);
+    return getCanvasPixelRatio(output, gl!);
   }
 
   let tileTexture: WebGLTexture | null = null;
@@ -704,7 +710,7 @@ export function createGrid(
   }
   motionQuery.addEventListener("change", onMotionChange);
 
-  const observer = new ResizeObserver(() => {
+  const observer = createCanvasResizeObserver(() => {
     syncCanvasSize();
     start();
   });
@@ -719,9 +725,11 @@ export function createGrid(
 
   const listenTarget = output.parentElement ?? output;
 
+  const rectCache = createRectCache(output);
+
   function onPointerMove(event: PointerEvent) {
     if (reducedMotion) return;
-    const rect = output.getBoundingClientRect();
+    const rect = rectCache.current;
     const aspect = Math.max(rect.width, 1) / Math.max(rect.height, 1);
     const fx = (event.clientX - rect.left) / Math.max(rect.width, 1);
     const fy = (event.clientY - rect.top) / Math.max(rect.height, 1);
@@ -759,8 +767,8 @@ export function createGrid(
     start();
   }
 
-  listenTarget.addEventListener("pointermove", onPointerMove);
-  listenTarget.addEventListener("pointerleave", onPointerLeave);
+  listenTarget.addEventListener("pointermove", onPointerMove, { passive: true });
+  listenTarget.addEventListener("pointerleave", onPointerLeave, { passive: true });
 
   return {
     setOptions(next) {
@@ -779,6 +787,7 @@ export function createGrid(
     },
     destroy() {
       destroyed = true;
+      rectCache.destroy();
       cancelAnimationFrame(raf);
       observer.disconnect();
       intersection.disconnect();

@@ -12,7 +12,7 @@ import {
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Frost } from "@/lib/Frost/Frost";
+import { Frost } from "@/components/docs/live/Frost";
 
 const CONTROLS = {
   frost: scrub("Frost", 0.05, { min: 0, max: 1, step: 0.05 }),

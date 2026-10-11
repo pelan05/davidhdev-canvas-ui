@@ -1,15 +1,21 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 import { HtmlInCanvasBanner } from "@/components/common/html-in-canvas-banner";
 import { ApiReference, type ApiProp } from "@/components/docs/api-reference";
 import { CodeTabs, type CodeVariant } from "@/components/docs/code-tabs";
 import { CopyMenu } from "@/components/docs/copy-menu";
 import { DependencyTabs } from "@/components/docs/dependency-tabs";
-import { InstallTabs } from "@/components/docs/install-tabs";
-import { getComponentDependencies, getDemoSource } from "@/lib/registry";
+import { highlight } from "@/components/docs/highlight";
+import { InstallNote, InstallTabs } from "@/components/docs/install-tabs";
+import {
+  getComponentDependencies,
+  getComponentSources,
+  getDemoSource,
+} from "@/lib/registry";
 import { COMPONENTS } from "@/data/components";
+import { cn } from "@/lib/utils";
 
 export interface ComponentDocProps {
   title: string;
@@ -26,7 +32,7 @@ export interface ComponentDocProps {
   tags?: string[];
   /**
    * Show a warning above the demo when Chrome's HTML-in-Canvas flag is off.
-   * Set this only for effects that don't render without the flag — not for
+   * Set this only for effects that don't render without the flag, not for
    * effects that degrade to a usable fallback.
    */
   requiresHtmlInCanvas?: boolean;
@@ -34,7 +40,20 @@ export interface ComponentDocProps {
   apiReference?: ApiProp[];
 }
 
-export function ComponentDoc({
+/** Pre-highlights the WebGPU (vgpu) sources; empty when the component has none. */
+async function getWebGPUVariants(installItem: string): Promise<CodeVariant[]> {
+  return Promise.all(
+    getComponentSources(installItem, "webgpu").map(async (file) => ({
+      id: file.id,
+      label: file.label,
+      fileName: file.fileName,
+      source: file.source,
+      html: await highlight(file.source, file.lang),
+    })),
+  );
+}
+
+export async function ComponentDoc({
   title,
   description,
   preview,
@@ -47,40 +66,48 @@ export function ComponentDoc({
 }: ComponentDocProps) {
   const { dependencies, devDependencies } =
     getComponentDependencies(installItem);
+  const webgpuDeps = getComponentDependencies(installItem, "webgpu");
   const demoSource = getDemoSource(installItem);
+  const webgpuVariants = await getWebGPUVariants(installItem);
+  const hasWebGPU = webgpuVariants.length > 0;
 
   return (
     <article className="mx-auto w-full max-w-3xl">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-[-0.02em]">{title}</h1>
-          <p className="mt-3 max-w-xl text-base leading-7 text-muted-foreground">
-            {description}
-          </p>
-          {tags && tags.length > 0 ? (
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full border border-border/60 px-2.5 py-0.5 text-[11.5px] text-muted-foreground"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </div>
+        <h1 className="min-w-0 text-3xl font-semibold tracking-[-0.02em]">
+          {title}
+        </h1>
         <CopyMenu
           title={title}
           description={description}
           installItem={installItem}
           variants={variants}
+          webgpuVariants={webgpuVariants}
           apiReference={apiReference}
           dependencies={dependencies}
           devDependencies={devDependencies}
+          webgpuDependencies={webgpuDeps.dependencies}
+          webgpuDevDependencies={webgpuDeps.devDependencies}
           demoSource={demoSource}
         />
       </div>
+      <p className="mt-3 max-w-xl text-base leading-7 text-muted-foreground">
+        {description}
+      </p>
+      {(tags && tags.length > 0) || hasWebGPU ? (
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {Array.from(
+            new Set([...(tags ?? []), ...(hasWebGPU ? ["webgl", "webgpu"] : [])]),
+          ).map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full border border-border/60 px-2.5 py-0.5 text-[11.5px] text-muted-foreground"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       {requiresHtmlInCanvas ? <HtmlInCanvasBanner /> : null}
 
@@ -102,14 +129,12 @@ export function ComponentDoc({
           Install
         </h2>
         <div className="mt-3">
-          <InstallTabs item={installItem} />
+          <InstallTabs item={installItem} hasWebGPU={hasWebGPU} />
         </div>
-        <p className="mt-2 text-[13px] text-muted-foreground">
-          Or copy the source below into your project.
-        </p>
+        <InstallNote hasWebGPU={hasWebGPU} />
       </section>
 
-      {dependencies.length > 0 || devDependencies.length > 0 ? (
+      {dependencies.length > 0 || devDependencies.length > 0 || hasWebGPU ? (
         <section className="mt-8" aria-label="Dependencies">
           <h2
             id="dependencies"
@@ -125,6 +150,10 @@ export function ComponentDoc({
             <DependencyTabs
               dependencies={dependencies}
               devDependencies={devDependencies}
+              webgpuDependencies={hasWebGPU ? webgpuDeps.dependencies : undefined}
+              webgpuDevDependencies={
+                hasWebGPU ? webgpuDeps.devDependencies : undefined
+              }
             />
           </div>
         </section>
@@ -138,7 +167,7 @@ export function ComponentDoc({
           Code
         </h2>
         <div className="mt-3">
-          <CodeTabs variants={variants} />
+          <CodeTabs variants={variants} webgpuVariants={webgpuVariants} />
         </div>
       </section>
 
@@ -172,44 +201,55 @@ function ComponentPager({ slug }: { slug: string }) {
   return (
     <nav
       aria-label="Component pagination"
-      className="not-typeset mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2"
+      className="not-typeset mt-12 grid grid-cols-1 gap-3 border-t border-border/60 pt-6 sm:grid-cols-2"
     >
-      {prev ? (
-        <Link
-          href={prev.href}
-          rel="prev"
-          className="group min-w-0 rounded-xl border border-border/60 p-4 transition-colors duration-150 hover:bg-muted/40"
-        >
-          <span className="flex items-center justify-between gap-2 text-sm font-medium text-foreground">
-            {prev.name}
-            <ChevronRight
-              aria-hidden
-              className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 ease-out group-hover:translate-x-0.5"
-            />
-          </span>
-          <span className="mt-1 block truncate text-[13px] text-muted-foreground">
-            {prev.description}
-          </span>
-        </Link>
-      ) : null}
-      {next ? (
-        <Link
-          href={next.href}
-          rel="next"
-          className="group min-w-0 rounded-xl border border-border/60 p-4 transition-colors duration-150 hover:bg-muted/40 sm:col-start-2"
-        >
-          <span className="flex items-center justify-between gap-2 text-sm font-medium text-foreground">
-            {next.name}
-            <ChevronRight
-              aria-hidden
-              className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 ease-out group-hover:translate-x-0.5"
-            />
-          </span>
-          <span className="mt-1 block truncate text-[13px] text-muted-foreground">
-            {next.description}
-          </span>
-        </Link>
-      ) : null}
+      {prev ? <PagerLink entry={prev} direction="prev" /> : null}
+      {next ? <PagerLink entry={next} direction="next" /> : null}
     </nav>
+  );
+}
+
+function PagerLink({
+  entry,
+  direction,
+}: {
+  entry: (typeof COMPONENTS)[number];
+  direction: "prev" | "next";
+}) {
+  const isPrev = direction === "prev";
+  const Arrow = isPrev ? ArrowLeft : ArrowRight;
+
+  const arrow = (
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-colors duration-150 group-hover:border-foreground/20 group-hover:text-foreground">
+      <Arrow
+        aria-hidden
+        className={cn(
+          "size-4 transition-transform duration-200 ease-out",
+          isPrev ? "group-hover:-translate-x-0.5" : "group-hover:translate-x-0.5",
+        )}
+      />
+    </span>
+  );
+
+  return (
+    <Link
+      href={entry.href}
+      rel={direction}
+      className={cn(
+        "group flex min-w-0 items-center gap-3 rounded-xl border border-border/60 px-4 py-3.5 transition-colors duration-150 hover:border-border hover:bg-muted/30",
+        !isPrev && "text-right sm:col-start-2",
+      )}
+    >
+      {isPrev ? arrow : null}
+      <span className="min-w-0 flex-1">
+        <span className="block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+          {isPrev ? "Previous" : "Next"}
+        </span>
+        <span className="mt-0.5 block truncate text-sm font-medium text-foreground">
+          {entry.name}
+        </span>
+      </span>
+      {isPrev ? null : arrow}
+    </Link>
   );
 }

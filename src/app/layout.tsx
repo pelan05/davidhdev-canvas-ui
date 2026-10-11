@@ -9,7 +9,7 @@ import { UrlStateProvider } from "@/components/common/url-state-provider";
 
 const SITE_URL = "https://canvasui.dev";
 const DESCRIPTION =
-  "An open source component library of creative html-in-canvas and WebGL effects for React, Solid, Preact, Vue, Svelte, and vanilla JS. Creative effects running over live HTML.";
+  "An open source component library of creative html-in-canvas effects for React, Solid, Preact, Vue, Svelte, and vanilla JS. Every effect ships as WebGL and WebGPU (via vgpu) builds, running over live HTML.";
 
 const ORIGIN_TRIAL_TOKEN =
   process.env.NEXT_PUBLIC_HTML_IN_CANVAS_OT_TOKEN ?? "";
@@ -17,7 +17,7 @@ const ORIGIN_TRIAL_TOKEN =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Canvas UI: Creative Canvas and WebGL Component Library",
+    default: "Canvas UI: Creative Canvas, WebGL and WebGPU Component Library",
     template: "%s | Canvas UI",
   },
   description: DESCRIPTION,
@@ -30,10 +30,15 @@ export const metadata: Metadata = {
     "vue component library",
     "svelte component library",
     "webgl component library",
+    "webgpu component library",
+    "webgpu components",
+    "vgpu",
+    "wgsl shaders",
     "canvas components",
     "ui components",
     "canvas",
     "webgl",
+    "webgpu",
     "html-in-canvas",
     "creative ui",
     "shader effects",
@@ -52,8 +57,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@davidhdev",
-    creator: "@davidhdev",
+    site: "@davidhaz",
+    creator: "@davidhaz",
     images: ["/og.png"],
   },
   icons: {

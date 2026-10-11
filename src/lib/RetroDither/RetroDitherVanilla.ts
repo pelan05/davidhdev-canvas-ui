@@ -1,3 +1,7 @@
+import { getCanvasPixelRatio, createCanvasResizeObserver } from "../canvas-viewport";
+import { prepareHtmlInCanvas, drawHtmlInCanvas } from "../html-in-canvas";
+import { createRectCache } from "../rect-cache";
+
 export interface RetroDitherOptions {
   /** Radius of the dither lens around the cursor, relative to the screen height. */
   radius?: number;
@@ -271,6 +275,8 @@ export function createRetroDither(
     typeof paintable.requestPaint === "function",
   );
 
+  if (htmlInCanvas) prepareHtmlInCanvas(source, content);
+
   let contentDirty = false;
   let wake = () => {};
 
@@ -278,7 +284,7 @@ export function createRetroDither(
     paintable.onpaint = () => {
       try {
         sourceCtx!.reset();
-        sourceCtx!.drawElementImage!(content, 0, 0);
+        drawHtmlInCanvas(source, sourceCtx!, content);
         contentDirty = true;
         scheduleTextMask();
         wake();
@@ -426,7 +432,7 @@ export function createRetroDither(
   let contentMaxX = 1;
 
   function syncCanvasSize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = getCanvasPixelRatio(output, gl!);
     const width = Math.max(1, Math.round(output.clientWidth * dpr));
     const height = Math.max(1, Math.round(output.clientHeight * dpr));
     if (output.width !== width || output.height !== height) {
@@ -438,14 +444,14 @@ export function createRetroDither(
       Math.max(0.05, content.clientWidth / Math.max(output.clientWidth, 1)),
     );
     if (htmlInCanvas) {
-      const cssWidth = Math.max(1, Math.round(source.clientWidth));
-      const cssHeight = Math.max(1, Math.round(source.clientHeight));
+      const sourceWidth = Math.max(1, Math.round(source.clientWidth * dpr));
+      const sourceHeight = Math.max(1, Math.round(source.clientHeight * dpr));
       if (
-        source.width !== cssWidth * dpr ||
-        source.height !== cssHeight * dpr
+        source.width !== sourceWidth ||
+        source.height !== sourceHeight
       ) {
-        source.width = cssWidth * dpr;
-        source.height = cssHeight * dpr;
+        source.width = sourceWidth;
+        source.height = sourceHeight;
       }
       paintable.requestPaint!();
     }
@@ -629,7 +635,7 @@ export function createRetroDither(
   }
   motionQuery.addEventListener("change", onMotionChange);
 
-  const observer = new ResizeObserver(() => {
+  const observer = createCanvasResizeObserver(() => {
     syncCanvasSize();
     scheduleTextMask();
     start();
@@ -645,8 +651,10 @@ export function createRetroDither(
 
   const listenTarget = output.parentElement ?? output;
 
+  const rectCache = createRectCache(output);
+
   function onPointerMove(event: PointerEvent) {
-    const rect = output.getBoundingClientRect();
+    const rect = rectCache.current;
     pointer.tx = (event.clientX - rect.left) / Math.max(rect.width, 1);
     pointer.ty = 1 - (event.clientY - rect.top) / Math.max(rect.height, 1);
     pointer.target = 1;
@@ -660,7 +668,7 @@ export function createRetroDither(
 
   function onPointerDown(event: PointerEvent) {
     if (reducedMotion || config.degauss <= 0.001) return;
-    const rect = output.getBoundingClientRect();
+    const rect = rectCache.current;
     ripples.push({
       x: (event.clientX - rect.left) / Math.max(rect.width, 1),
       y: 1 - (event.clientY - rect.top) / Math.max(rect.height, 1),
@@ -670,9 +678,9 @@ export function createRetroDither(
     start();
   }
 
-  listenTarget.addEventListener("pointermove", onPointerMove);
-  listenTarget.addEventListener("pointerleave", onPointerLeave);
-  listenTarget.addEventListener("pointerdown", onPointerDown);
+  listenTarget.addEventListener("pointermove", onPointerMove, { passive: true });
+  listenTarget.addEventListener("pointerleave", onPointerLeave, { passive: true });
+  listenTarget.addEventListener("pointerdown", onPointerDown, { passive: true });
   content.addEventListener("scroll", scheduleTextMask, {
     capture: true,
     passive: true,
@@ -708,6 +716,7 @@ export function createRetroDither(
     },
     destroy() {
       destroyed = true;
+      rectCache.destroy();
       cancelAnimationFrame(raf);
       window.clearTimeout(maskTimer);
       observer.disconnect();

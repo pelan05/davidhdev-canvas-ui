@@ -45,15 +45,39 @@ export function DemoImageCycler({
   interval?: number;
 }) {
   const shouldReduceMotion = useReducedMotion();
-  const [active, setActive] = useState(0);
+  const imageCount = images.length;
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(
-      () => setActive((prev) => (prev + 1) % images.length),
-      interval,
-    );
-    return () => clearInterval(id);
-  }, [images.length, interval]);
+    if (shouldReduceMotion || imageCount < 2 || interval <= 0) return;
+
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const stop = () => {
+      if (timer === null) return;
+      clearInterval(timer);
+      timer = null;
+    };
+    const start = () => {
+      if (timer !== null || document.hidden) return;
+      timer = setInterval(
+        () => setActiveIndex((prev) => (prev + 1) % imageCount),
+        interval,
+      );
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) stop();
+      else start();
+    };
+
+    start();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [imageCount, interval, shouldReduceMotion]);
+
+  const active = imageCount === 0 ? 0 : activeIndex % imageCount;
 
   return (
     <div className="relative aspect-video w-full overflow-hidden">

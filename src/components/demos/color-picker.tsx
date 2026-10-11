@@ -546,7 +546,7 @@ function useEyeDropper(): EyeDropperConstructor | null {
   );
 }
 
-function ColorPopover({
+export function ColorPopover({
   id,
   anchorRef,
   value,

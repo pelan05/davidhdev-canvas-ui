@@ -1,3 +1,5 @@
+import { getCanvasPixelRatio, createCanvasResizeObserver } from "../canvas-viewport";
+import { prepareHtmlInCanvas, drawHtmlInCanvas } from "../html-in-canvas";
 export interface ParticleScrollOptions {
   /** Viewport fraction of the formation line. Content assembles as it scrolls up past this line and dissolves back below it. */
   point?: number;
@@ -238,6 +240,19 @@ export function createParticleScroll(
   const config = { ...DEFAULTS, ...options };
   const { source, content, output } = elements;
 
+  const sourceCtx = source.getContext("2d") as ElementImageContext | null;
+  const paintable = source as PaintableCanvas;
+  const htmlInCanvas = Boolean(
+    source.contains(content) &&
+    sourceCtx &&
+    typeof sourceCtx.drawElementImage === "function" &&
+    typeof paintable.requestPaint === "function",
+  );
+
+  // No particle renderer is available without a DOM capture. Leave the plain
+  // HTML fallback to the browser without creating a GPU overlay.
+  if (!htmlInCanvas) return null;
+
   const gl = output.getContext("webgl2", {
     alpha: true,
     depth: false,
@@ -247,13 +262,7 @@ export function createParticleScroll(
   });
   if (!gl || gl.isContextLost()) return null;
 
-  const sourceCtx = source.getContext("2d") as ElementImageContext | null;
-  const paintable = source as PaintableCanvas;
-  const htmlInCanvas = Boolean(
-    sourceCtx &&
-    typeof sourceCtx.drawElementImage === "function" &&
-    typeof paintable.requestPaint === "function",
-  );
+  prepareHtmlInCanvas(source, content);
 
   let contentDirty = false;
   let wake = () => {};
@@ -262,7 +271,7 @@ export function createParticleScroll(
     paintable.onpaint = () => {
       try {
         sourceCtx!.reset();
-        sourceCtx!.drawElementImage!(content, 0, 0);
+        drawHtmlInCanvas(source, sourceCtx!, content);
         contentDirty = true;
         wake();
       } catch {}
@@ -376,7 +385,7 @@ export function createParticleScroll(
   }
 
   function syncCanvasSize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = getCanvasPixelRatio(output, gl!);
     const width = Math.max(1, Math.round(output.clientWidth * dpr));
     const height = Math.max(1, Math.round(output.clientHeight * dpr));
     if (output.width !== width || output.height !== height) {
@@ -388,11 +397,11 @@ export function createParticleScroll(
       Math.max(0.05, content.clientWidth / Math.max(output.clientWidth, 1)),
     );
     if (htmlInCanvas) {
-      const cssWidth = Math.max(1, Math.round(source.clientWidth));
-      const cssHeight = Math.max(1, Math.round(source.clientHeight));
-      if (source.width !== cssWidth * dpr || source.height !== cssHeight * dpr) {
-        source.width = cssWidth * dpr;
-        source.height = cssHeight * dpr;
+      const sourceWidth = Math.max(1, Math.round(source.clientWidth * dpr));
+      const sourceHeight = Math.max(1, Math.round(source.clientHeight * dpr));
+      if (source.width !== sourceWidth || source.height !== sourceHeight) {
+        source.width = sourceWidth;
+        source.height = sourceHeight;
       }
       paintable.requestPaint!();
     }
@@ -648,7 +657,7 @@ export function createParticleScroll(
   }
   motionQuery.addEventListener("change", onMotionChange);
 
-  const observer = new ResizeObserver(() => {
+  const observer = createCanvasResizeObserver(() => {
     syncCanvasSize();
     start();
   });

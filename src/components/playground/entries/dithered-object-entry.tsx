@@ -14,7 +14,7 @@ import {
 } from "@/components/playground/entries/shared";
 import { MockSite } from "@/components/playground/mock-site";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { DitheredObject } from "@/lib/DitheredObject/DitheredObject";
+import { DitheredObject } from "@/components/docs/live/DitheredObject";
 
 const MODEL_URL = "/assets/models/bolt.glb";
 const DEFAULT_HIGHLIGHT = "#066aff";

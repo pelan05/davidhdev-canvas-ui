@@ -2,16 +2,21 @@
 
 import { type ReactNode } from "react";
 
-import { color, scrub, toggle } from "@/components/demos/control-schema";
+import { color, radio, scrub, toggle } from "@/components/demos/control-schema";
 import {
   ColorRow,
   DemoControls,
   useDemoScrollbarGutter,
 } from "@/components/demos/demo-controls";
 import { useDemoControls } from "@/hooks/use-demo-controls";
-import { Liquid } from "@/lib/Liquid/Liquid";
+import { Liquid } from "@/components/docs/live/Liquid";
 
 const CONTROLS = {
+  quality: radio("Quality", "medium", [
+    { value: "low", label: "Low" },
+    { value: "medium", label: "Medium" },
+    { value: "high", label: "High" },
+  ]),
   force: scrub("Force", 1.1, { min: 0, max: 5, step: 0.1, decimals: 1 }),
   radius: scrub("Radius", 0.3, { min: 0.05, max: 1.5, step: 0.05 }),
   curl: scrub("Curl", 1.9, { min: 0, max: 10, step: 0.1, decimals: 1 }),
@@ -41,6 +46,12 @@ const CONTROLS = {
   rainbow: toggle("Rainbow", false),
 };
 
+const RESOLUTION_PRESETS = {
+  low: { simResolution: 32, dyeResolution: 128 },
+  medium: { simResolution: 128, dyeResolution: 512 },
+  high: { simResolution: 256, dyeResolution: 1024 },
+} as const;
+
 function hexToRgb(hex: string): [number, number, number] {
   const value = parseInt(hex.slice(1), 16);
   return [
@@ -55,12 +66,14 @@ export function LiquidDemo({ children }: { children: ReactNode }) {
   const { setValue } = controls;
   const setContentEl = useDemoScrollbarGutter();
 
-  const { color, rainbow, ...values } = controls.values;
+  const { color, rainbow, quality, ...values } = controls.values;
+  const resolution = RESOLUTION_PRESETS[quality];
 
   return (
     <>
       <Liquid
         {...values}
+        {...resolution}
         color={hexToRgb(color)}
         rainbow={rainbow}
         className="page-enter inset-0 z-30"
@@ -78,7 +91,12 @@ export function LiquidDemo({ children }: { children: ReactNode }) {
         title="Liquid controls"
         snippet={{
           component: "Liquid",
-          props: { ...values, color: hexToRgb(color), rainbow },
+          props: {
+            ...values,
+            ...resolution,
+            color: hexToRgb(color),
+            rainbow,
+          },
         }}
         controls={controls}
         rows={{

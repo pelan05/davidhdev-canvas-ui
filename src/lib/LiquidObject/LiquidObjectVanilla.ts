@@ -1,9 +1,11 @@
+import { getCanvasPixelRatio, createCanvasResizeObserver } from "../canvas-viewport";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { SVGLoader } from "three/addons/loaders/SVGLoader.js";
 import { toCreasedNormals } from "three/addons/utils/BufferGeometryUtils.js";
+import { createRectCache } from "../rect-cache";
 
 export interface LiquidObjectOptions {
   /** URL of the asset to display: GLB/glTF, SVG, PNG, JPEG, WebP, or GIF. Object URLs from a file input work too. The format is sniffed from the bytes, not the extension. */
@@ -1608,8 +1610,10 @@ export function createLiquidObject(
   let squash = 0;
   let squashVel = 0;
 
+  const rectCache = createRectCache(canvas);
+
   function onPointerMove(event: PointerEvent) {
-    const rect = canvas.getBoundingClientRect();
+    const rect = rectCache.current;
     if (rect.width < 1 || rect.height < 1) return;
     const px = event.clientX - rect.left;
     const py = event.clientY - rect.top;
@@ -1814,7 +1818,7 @@ export function createLiquidObject(
   function resize() {
     const width = Math.max(canvas.clientWidth, 1);
     const height = Math.max(canvas.clientHeight, 1);
-    const pr = Math.min(window.devicePixelRatio || 1, 2);
+    const pr = getCanvasPixelRatio(canvas, renderer.getContext());
     renderer.setPixelRatio(pr);
     renderer.setSize(width, height, false);
     sceneTarget.setSize(
@@ -1827,7 +1831,7 @@ export function createLiquidObject(
     splatPass.uniforms.uAspect.value = aspect;
   }
 
-  const observer = new ResizeObserver(resize);
+  const observer = createCanvasResizeObserver(resize);
   observer.observe(canvas);
   resize();
   clearSimulation();
@@ -1951,6 +1955,7 @@ export function createLiquidObject(
     resize,
     destroy() {
       disposed = true;
+      rectCache.destroy();
       loadToken += 1;
       stopLoop();
       observer.disconnect();
